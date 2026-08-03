@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Quimia IO — Cronograma del Proyecto</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:#F0F6FF;
+  color:#0F172A;
+  line-height:1.6;
+}
+
+/* ── HEADER ── */
+.header{
+  background:#0D1B36;
+  padding:52px 6% 44px;
+  position:relative;
+  overflow:hidden;
+}
+.header::before{
+  content:'';position:absolute;top:-120px;right:-120px;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,196,224,.12) 0%,transparent 70%);
+}
+.header-inner{max-width:900px;margin:0 auto;position:relative;z-index:1;}
+.logo{font-size:1.9rem;font-weight:300;color:#fff;letter-spacing:-.3px;margin-bottom:6px}
+.logo span{font-weight:800;color:#00C4E0}
+.header-sub{font-size:.85rem;color:rgba(255,255,255,.5);margin-bottom:28px}
+.header-title{font-size:2rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:10px}
+.header-date{font-size:.82rem;color:rgba(255,255,255,.4)}
+.top-bar{position:absolute;top:0;left:0;right:0;height:4px;background:#00C4E0}
+
+/* ── RESUMEN FASES ── */
+.summary{
+  background:#fff;
+  border-bottom:1px solid #E2E8F0;
+  padding:36px 6%;
+}
+.summary-inner{max-width:900px;margin:0 auto}
+.section-label{
+  font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:#00C4E0;margin-bottom:12px
+}
+.summary p{font-size:.95rem;color:#475569;line-height:1.8;margin-bottom:24px}
+.phase-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.phase-cards{grid-template-columns:1fr}}
+.phase-card{
+  border-radius:12px;padding:20px 22px;
+  border:1px solid #E2E8F0;
+}
+.phase-card.p1{background:#0D1B36;border-color:#0D1B36}
+.phase-card.p2{background:#F8FAFF;border-color:#E2E8F0}
+.pc-tag{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.p1 .pc-tag{color:#00C4E0}
+.p2 .pc-tag{color:#64748B}
+.pc-name{font-size:1rem;font-weight:700;margin-bottom:12px}
+.p1 .pc-name{color:#fff}
+.p2 .pc-name{color:#0D1B36}
+.pc-row{display:flex;gap:20px;flex-wrap:wrap}
+.pc-stat{display:flex;flex-direction:column;gap:2px}
+.pc-stat-label{font-size:.7rem}
+.p1 .pc-stat-label{color:rgba(255,255,255,.45)}
+.p2 .pc-stat-label{color:#94A3B8}
+.pc-stat-val{font-size:1.1rem;font-weight:800}
+.p1 .pc-stat-val{color:#fff}
+.p2 .pc-stat-val{color:#0D1B36}
+.p2 .pc-stat-val.muted{color:#94A3B8;font-weight:600;font-size:.95rem}
+
+/* ── SECTIONS ── */
+.section{padding:48px 6%;max-width:900px;margin:0 auto}
+.section-title{
+  font-size:1.05rem;font-weight:800;color:#0D1B36;
+  border-left:4px solid #00C4E0;padding-left:14px;
+  margin-bottom:28px
+}
+
+/* ── INCLUYE ── */
+.includes{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px
+}
+@media(max-width:600px){.includes{grid-template-columns:1fr}}
+.inc-item{
+  background:#fff;border:1px solid #E2E8F0;border-radius:10px;
+  padding:12px 14px;display:flex;align-items:flex-start;gap:10px;
+  font-size:.85rem;color:#334155;
+}
+.inc-item .dot{
+  width:20px;height:20px;border-radius:50%;background:#E0F8FF;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px
+}
+.inc-item .dot svg{width:11px;height:11px}
+.inc-item.highlight{border-color:#00C4E0;background:#F0FDFF}
+.inc-item.highlight .dot{background:#00C4E0}
+.inc-item.highlight .dot svg path{stroke:#fff}
+
+/* ── TIMELINE ── */
+.timeline{display:flex;flex-direction:column;gap:0;margin-bottom:32px}
+.tl-item{display:flex;gap:0;position:relative}
+.tl-left{
+  width:130px;flex-shrink:0;text-align:right;padding:14px 20px 14px 0;
+  font-size:.78rem;font-weight:700;color:#0D1B36;line-height:1.3
+}
+.tl-line{
+  display:flex;flex-direction:column;align-items:center;flex-shrink:0;
+}
+.tl-dot{
+  width:14px;height:14px;border-radius:50%;background:#00C4E0;
+  border:3px solid #F0F6FF;margin-top:16px;flex-shrink:0;z-index:1
+}
+.tl-dot.star{background:#0D1B36;border-color:#00C4E0}
+.tl-connector{width:2px;background:#E2E8F0;flex:1}
+.tl-right{
+  flex:1;padding:10px 0 10px 18px;
+}
+.tl-card{
+  background:#fff;border:1px solid #E2E8F0;border-radius:10px;
+  padding:12px 16px;font-size:.88rem;color:#334155;line-height:1.5;
+  margin-bottom:2px
+}
+.tl-card.featured{border-color:#00C4E0;background:#F0FDFF}
+.tl-card strong{color:#0D1B36;font-weight:700}
+.tl-item:last-child .tl-connector{display:none}
+
+/* ── NOTA ── */
+.nota{
+  background:#FFF8E7;border:1px solid #FDE68A;border-radius:10px;
+  padding:14px 18px;font-size:.85rem;color:#92400E;margin-bottom:32px;
+  display:flex;gap:10px;align-items:flex-start
+}
+.nota-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+
+/* ── NECESITAMOS ── */
+.needs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
+@media(max-width:600px){.needs{grid-template-columns:1fr}}
+.need-card{
+  background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px;
+  text-align:center
+}
+.need-week{font-size:.7rem;font-weight:700;color:#00C4E0;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.need-text{font-size:.82rem;color:#475569;line-height:1.5}
+
+/* ── REGLA CAMBIOS ── */
+.rule-box{
+  background:#0D1B36;border-radius:12px;padding:20px 24px;
+  margin-bottom:8px;display:flex;gap:16px;align-items:flex-start
+}
+.rule-icon{font-size:1.5rem;flex-shrink:0}
+.rule-text{font-size:.88rem;color:rgba(255,255,255,.7);line-height:1.6}
+.rule-text strong{color:#fff}
+
+/* ── FASE 2 ── */
+.f2-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+@media(max-width:600px){.f2-items{grid-template-columns:1fr}}
+.f2-card{
+  background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px
+}
+.f2-weeks{font-size:.7rem;font-weight:700;color:#00C4E0;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.f2-title{font-size:.88rem;font-weight:700;color:#0D1B36;margin-bottom:4px}
+.f2-desc{font-size:.8rem;color:#64748B;line-height:1.4}
+.f2-extras{
+  background:#F8FAFF;border:1px solid #E2E8F0;border-radius:10px;
+  padding:14px 18px;font-size:.82rem;color:#475569;line-height:1.7
+}
+.f2-extras strong{color:#0D1B36;font-weight:700}
+
+/* ── FASE 3 ── */
+.f3-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.chip{
+  background:#fff;border:1px solid #E2E8F0;border-radius:99px;
+  padding:5px 14px;font-size:.78rem;color:#475569
+}
+
+/* ── PUNTO REVISION ── */
+.revision-box{
+  background:#E0F8FF;border:1px solid #7DE8F8;border-radius:10px;
+  padding:16px 20px;display:flex;gap:14px;align-items:flex-start;margin-bottom:32px
+}
+.revision-icon{font-size:1.4rem;flex-shrink:0}
+.revision-text{font-size:.88rem;color:#0D1B36;line-height:1.5}
+.revision-text strong{font-weight:700}
+
+/* ── FOOTER ── */
+footer{
+  background:#0D1B36;padding:28px 6%;
+  text-align:center;
+  font-size:.78rem;color:rgba(255,255,255,.3)
+}
+footer a{color:#00C4E0;text-decoration:none}
+
+/* ── DIVIDER ── */
+hr{border:none;border-top:1px solid #E2E8F0;margin:0}
+</style>
+</head>
+<body>
+
+<div class="top-bar"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">Quimia <span>IO</span></div>
+    <div class="header-sub">Sistema de Información de Laboratorio · Preparado para el laboratorio cliente</div>
+    <div class="header-title">Cronograma del Proyecto</div>
+    <div class="header-date">6 de julio de 2026</div>
+  </div>
+</div>
+
+<!-- RESUMEN -->
+<div class="summary">
+  <div class="summary-inner">
+    <div class="section-label">Resumen ejecutivo</div>
+    <p>Quimia IO se entregará en dos fases. La <strong>Fase 1</strong> construye el sistema operativo completo para su laboratorio: registro de pacientes, órdenes, captura y validación de resultados, entrega digital, control de caja y tablero Kanban en tiempo real. La <strong>Fase 2</strong> amplía la plataforma con WhatsApp, cotizaciones, convenios, interfaz con equipos, facturación electrónica CFDI 4.0 y capacidades en la nube.</p>
+    <div class="phase-cards">
+      <div class="phase-card p1">
+        <div class="pc-tag">Fase 1</div>
+        <div class="pc-name">Sistema operativo del laboratorio</div>
+        <div class="pc-row">
+          <div class="pc-stat">
+            <span class="pc-stat-label">Duración</span>
+            <span class="pc-stat-val">17 semanas</span>
+          </div>
+          <div class="pc-stat">
+            <span class="pc-stat-label">Inversión</span>
+            <span class="pc-stat-val">$32,000 MXN</span>
+          </div>
+          <div class="pc-stat">
+            <span class="pc-stat-label">Precio</span>
+            <span class="pc-stat-val" style="color:#00C4E0;font-size:.85rem">Precio fijo</span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-card p2">
+        <div class="pc-tag">Fase 2</div>
+        <div class="pc-name">Plataforma ampliada</div>
+        <div class="pc-row">
+          <div class="pc-stat">
+            <span class="pc-stat-label">Duración</span>
+            <span class="pc-stat-val">~14 semanas</span>
+          </div>
+          <div class="pc-stat">
+            <span class="pc-stat-label">Inversión</span>
+            <span class="pc-stat-val muted">Por definir al cierre de Fase 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr/>
+
+<!-- FASE 1 -->
+<div class="section">
+  <div class="section-title">Fase 1 — Sistema operativo del laboratorio</div>
+
+  <div class="section-label">Qué incluye</div>
+  <div class="includes" style="margin-top:10px">
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Acceso seguro con tres perfiles: administrador, recepcionista y químico
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Catálogos completos: estudios, analitos, paquetes, métodos, equipos, recipientes
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Registro de pacientes y órdenes con pagos y folio único
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Captura de resultados: numéricos, cálculos, texto, imagen y documento
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Alerta visual de valores críticos con confirmación obligatoria al validar
+    </div>
+    <div class="inc-item highlight">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <strong>Tablero Kanban</strong> con órdenes activas y alertas a 45 y 90 minutos
+    </div>
+    <div class="inc-item highlight">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <strong>Portal del paciente</strong>: PDF, correo y código QR con verificación
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Control de caja: apertura, cierre, corte por método de pago y vendedor
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Reportes básicos de ventas y tablero de indicadores del día
+    </div>
+    <div class="inc-item">
+      <div class="dot"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#00C4E0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Bitácora de auditoría de los eventos importantes del sistema
+    </div>
+  </div>
+
+  <div class="nota">
+    <div class="nota-icon">📋</div>
+    <div><strong>Facturación:</strong> durante la Fase 1, la emisión de facturas continúa por el canal contable actual del laboratorio. La facturación electrónica integrada (CFDI 4.0) se incorpora en la Fase 2 como módulo adicional.</div>
+  </div>
+
+  <div class="section-label" style="margin-bottom:14px">Calendario semanal</div>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left">Semanas 1–2</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Fundamentos del sistema (accesos y perfiles) y <strong>visita de descubrimiento</strong>: confirmación de personal, volumen diario y equipos</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 3–5</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Catálogos de configuración: estudios, analitos, valores de referencia, paquetes y plantilla de PDF</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 5–7</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Pacientes, órdenes, pagos, folio/ticket y apertura de caja</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 8–10</div>
+      <div class="tl-line"><div class="tl-dot star"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card featured"><strong>⭐ Revisión intermedia en semana 8</strong> · Demostración de avance con el laboratorio<br/>Captura de resultados (todos los tipos), cálculos y validación</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 10–12</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card"><strong>Tablero Kanban</strong> y tablero de indicadores del día</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 12–13</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Entrega de resultados: PDF, correo y <strong>portal del paciente con QR</strong></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 13–14</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Control de caja completo, reportes básicos y bitácora de auditoría</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semanas 15–16</div>
+      <div class="tl-line"><div class="tl-dot"></div><div class="tl-connector"></div></div>
+      <div class="tl-right">
+        <div class="tl-card">Pruebas con el personal del laboratorio, carga de catálogos y capacitación</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">Semana 17</div>
+      <div class="tl-line"><div class="tl-dot star"></div></div>
+      <div class="tl-right">
+        <div class="tl-card featured"><strong>🚀 Puesta en marcha</strong> con acompañamiento intensivo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-bottom:12px">Qué necesitamos del laboratorio</div>
+  <div class="needs">
+    <div class="need-card">
+      <div class="need-week">Semana 1</div>
+      <div class="need-text">Visita de trabajo para conocer la operación diaria, el personal y los equipos</div>
+    </div>
+    <div class="need-card">
+      <div class="need-week">Semanas 3–5</div>
+      <div class="need-text">Lista de estudios, precios y valores de referencia para cargar catálogos</div>
+    </div>
+    <div class="need-card">
+      <div class="need-week">Semanas 15–16</div>
+      <div class="need-text">Disponibilidad del personal para pruebas y capacitación</div>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-bottom:12px">Regla de cambios</div>
+  <div class="rule-box">
+    <div class="rule-icon">⚖️</div>
+    <div class="rule-text">Para proteger la fecha de entrega, cualquier funcionalidad nueva durante la Fase 1 se <strong>intercambia</strong> por una de alcance equivalente — nunca se suma. Las primeras candidatas a intercambio, si el laboratorio lo prefiere, son cotizaciones y mensajería por WhatsApp, hoy planeadas para la Fase 2.</div>
+  </div>
+</div>
+
+<hr/>
+
+<!-- FASE 2 -->
+<div class="section">
+  <div class="section-title">Fase 2 — Plataforma ampliada <span style="font-weight:400;color:#64748B;font-size:.85rem">(~14 semanas · calendario se define al cierre de Fase 1)</span></div>
+
+  <div class="f2-items">
+    <div class="f2-card">
+      <div class="f2-weeks">Semanas 1–4</div>
+      <div class="f2-title">Infraestructura en la nube</div>
+      <div class="f2-desc">Plataforma multi-laboratorio con acceso por subdominio propio para cada cliente</div>
+    </div>
+    <div class="f2-card">
+      <div class="f2-weeks">Semanas 5–8</div>
+      <div class="f2-title">WhatsApp, cotizaciones y convenios</div>
+      <div class="f2-desc">Envío de resultados por WhatsApp, cotizaciones digitales, convenios con empresas y comisiones de médicos</div>
+    </div>
+    <div class="f2-card">
+      <div class="f2-weeks">Semanas 9–11</div>
+      <div class="f2-title">Interfaz con equipos y reportes</div>
+      <div class="f2-desc">Importación automática de resultados desde analizadores (Mindray, Spin, Biobas) y reportes completos con gráficas</div>
+    </div>
+    <div class="f2-card">
+      <div class="f2-weeks">Semanas 12–14</div>
+      <div class="f2-title">Inventario, multi-sucursal y CFDI</div>
+      <div class="f2-desc">Inventario de reactivos, soporte multi-sucursal, <strong>facturación electrónica CFDI 4.0</strong> y ajuste de referencias por altitud</div>
+    </div>
+  </div>
+  <div class="f2-extras">
+    <strong>También incluye:</strong> umbrales de alerta configurables en el tablero Kanban, permisos granulares por módulo, notificaciones automáticas al paciente y firma digital de recibido.
+  </div>
+</div>
+
+<hr/>
+
+<!-- FASE 3 -->
+<div class="section">
+  <div class="section-title">Fase 3 — Visión a futuro</div>
+  <p style="font-size:.88rem;color:#475569;margin-bottom:16px">Se priorizará según las necesidades del laboratorio después de la Fase 2.</p>
+  <div class="f3-chips">
+    <div class="chip">📅 Agenda de citas</div>
+    <div class="chip">🖼️ Módulo de imagenología</div>
+    <div class="chip">🔗 Integración con expedientes clínicos</div>
+    <div class="chip">📱 Aplicaciones móviles nativas</div>
+  </div>
+</div>
+
+<footer>
+  <div style="margin-bottom:6px">
+    <span style="font-size:1rem;font-weight:300;color:rgba(255,255,255,.6)">Quimia <span style="font-weight:800;color:#00C4E0">IO</span></span>
+  </div>
+  Documento informativo de planeación. Los alcances detallados constan en el documento de requerimientos del proyecto.<br/>
+  <a href="mailto:jesus@ediservice.net">jesus@ediservice.net</a>
+</footer>
+
+</body>
+</html>

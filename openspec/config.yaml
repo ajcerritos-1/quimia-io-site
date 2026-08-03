@@ -1,0 +1,52 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Quimia IO — multi-tenant LIS (Next.js 16 App Router, TS 6 strict, Neon+RLS,
+  Prisma 7 Client Extension wrapper, Better Auth). Screaming/vertical-slice
+  modular monolith under src/modules/*. Greenfield, no code yet. Stack and
+  rules are planning-derived (BMad PRD/Architecture/UX/Epics), not detected
+  from disk. 12 adopted ADs govern tenant isolation, DB access, and equipment
+  interfacing. See sdd-init/quimiaio in Engram for full context.
+
+testing:
+  strict_tdd: true
+  test_command: "vitest run"
+  e2e_command: "playwright test"
+  notes: >
+    Recommended only (Architecture Spine does not name a framework): Vitest
+    for unit/integration, Playwright for sign-in e2e. Confirm with team
+    during Story 1.1 implementation before treating as decided.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Cross-module access only through explicit interface/service calls (AD-1) — never reach into another module's Prisma models
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Tenant-owned data flows MUST state RLS/AD-2/AD-3 implications explicitly
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Reference the bound AD-# from ARCHITECTURE-SPINE.md for any structural decision
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    - All DB access MUST go through src/shared/db (Prisma Client Extension wrapper) — no raw prisma.<model> calls (AD-3)
+    tdd: true
+    test_command: "vitest run"
+  verify:
+    test_command: "vitest run"
+    build_command: "next build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+# First SDD change note (see sdd-init/quimiaio in Engram for full detail):
+# _bmad-output/planning-artifacts/epics.md (Epic 1, Story 1.1) and
+# _bmad-output/implementation-artifacts/1-1-user-sign-in.md are the
+# authoritative proposal+spec+design+tasks equivalent for Story 1.1 —
+# sdd-new/sdd-continue should treat that BMad story as input, not redo it.

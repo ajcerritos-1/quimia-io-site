@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quimia IO — Key Screen: Captura de Resultados</title>
+<style>
+/*
+  KEY SCREEN 2/4 — CAPTURA DE RESULTADOS (most complex flow's hero screen)
+  Illustrates:
+  - DESIGN.md Components: evidence-gallery (white surface, {colors.border}, rounded-md container, rounded-sm items,
+    visible drag handle), "Study reorder" (same treatment one level up), input-pill (focus ring: {colors.accent}
+    border + {colors.accent-lt} glow), button-primary (Validar), status-pill (validado)
+  - DESIGN.md Typography: {typography.label}, {typography.micro} (Tab-order keyboard hint), {typography.section-title}
+  - EXPERIENCE.md Component Patterns: Evidence gallery (crop presets to report column width, captions, drag-reorder,
+    live report-accurate preview), Study reorder, Correction history popover (inline icon per analyte, not opened here)
+  - EXPERIENCE.md Key Flow 2 (Q.F.B. Sofía Camacho — Lucía Andrade's order, urine culture growing two organisms:
+    "Antibiograma — E. coli" dragged above "Antibiograma — Klebsiella pneumoniae")
+  - EXPERIENCE.md State Patterns: calculated-analyte recalculation (LDL derived from colesterol total + HDL +
+    triglicéridos), Guardar vs. Validar semantics, per-study validation granularity
+  - EXPERIENCE.md Interaction Primitives: keyboard-first capture (FR-30, Tab between analytes)
+  - EXPERIENCE.md Anti-patterns: UI must visibly distinguish device-sourced ("Automático") from manually-entered
+    values — rejected anti-pattern #2 (broken analyzer integrations forcing manual transcription)
+  - PRD FR-28 (calculated analyte type), FR-29 (Normal/Low/High highlight), FR-30 (Tab navigation), FR-31 (Validar)
+*/
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background:#E4E9F2; color:#0F172A; padding:32px 0 60px;
+}
+.rationale { max-width:1280px; margin:0 auto 20px; padding:16px 28px; background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(13,27,54,0.06); }
+.rationale h1 { font-size:14px; color:#0D1B36; margin-bottom:4px; }
+.rationale p { font-size:12.5px; color:#607089; line-height:1.6; }
+
+.browser-frame { width:1280px; margin:0 auto; border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(13,27,54,0.16); background:#F0F6FF; }
+.browser-chrome { height:40px; background:#0B1730; display:flex; align-items:center; padding:0 16px; gap:8px; }
+.dot { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,0.15); }
+.url-bar { flex:1; margin-left:14px; height:26px; border-radius:999px; background:rgba(255,255,255,0.08); display:flex; align-items:center; padding:0 16px; font-size:12px; color:#9AA8BF; }
+
+.app-shell { display:flex; min-height:900px; }
+
+.sidebar { width:232px; background:#0D1B36; padding:20px 14px; display:flex; flex-direction:column; }
+.logo { font-size:20px; margin:4px 10px 26px; }
+.logo b { font-weight:300; color:#E7ECF5; } .logo span { font-weight:800; color:#00C4E0; }
+.sidebar nav { display:flex; flex-direction:column; gap:3px; }
+.sidebar nav a { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; font-size:13.5px; color:#8291A8; font-weight:600; text-decoration:none; }
+.sidebar nav a .ic { width:18px; text-align:center; font-size:14px; color:#4B5A73; }
+.sidebar nav a.active { background:rgba(0,196,224,0.14); color:#fff; }
+.sidebar nav a.active .ic { color:#00C4E0; }
+.sidebar .foot { margin-top:auto; padding:14px 10px; font-size:11px; color:#3E4C66; }
+
+.main-col { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar { height:68px; background:#0F2044; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 28px; }
+.branch-chip { display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(255,255,255,0.06); border-radius:999px; font-size:13px; font-weight:600; color:#E7ECF5; }
+.branch-chip .car { color:#00C4E0; }
+.top-right { display:flex; align-items:center; gap:18px; }
+.cash-status { display:flex; align-items:center; gap:8px; padding:7px 16px; border-radius:999px; background:rgba(16,185,129,0.16); color:#5EEAD4; font-size:12.5px; font-weight:700; }
+.cash-status .pulse { width:8px; height:8px; border-radius:50%; background:#10B981; }
+.user-badge { display:flex; align-items:center; gap:10px; }
+.avatar { width:36px; height:36px; border-radius:50%; background:#00C4E0; color:#0D1B36; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; }
+.user-meta .name { font-size:13px; font-weight:700; color:#fff; }
+.user-meta .role { font-size:11px; color:#00C4E0; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+
+.main { padding:26px 28px 32px; flex:1; overflow:auto; background:#F0F6FF; }
+.main h1.page-title { font-size:20px; font-weight:700; color:#0D1B36; }
+.main .subtitle { font-size:13px; color:#607089; margin-bottom:18px; }
+
+.order-bar { background:#fff; border-radius:16px; padding:14px 20px; box-shadow:0 2px 12px rgba(13,27,54,0.05); display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+.order-bar .studychip { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; border:1px solid #E2E8F0; background:#fff; font-size:12.5px; font-weight:700; color:#607089; }
+.order-bar .studychip .handle { color:#94A3B8; font-size:11px; letter-spacing:1px; cursor:grab; }
+.order-bar .studychip.current { border-color:#00C4E0; color:#0D1B36; background:#E0F8FF; }
+.order-bar .studychip .st { padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; margin-left:4px; }
+.order-bar .studychip .st.draft { background:#F1F5F9; color:#475569; }
+.order-bar .studychip .st.progress { background:#FEF3C7; color:#B45309; }
+
+.section-title { font-size:14.5px; font-weight:700; color:#0D1B36; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+.section-title .sub { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#94A3B8; }
+
+.card-panel { background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 2px 12px rgba(13,27,54,0.05); margin-bottom:22px; }
+
+/* Analyte field row — input-pill component */
+.analyte-row { display:grid; grid-template-columns:1.3fr 0.85fr 0.5fr 0.7fr 0.55fr; gap:14px; align-items:center; padding:10px 4px; border-bottom:1px solid #F1F5F9; }
+.analyte-row:last-child { border-bottom:none; }
+.analyte-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#0F172A; }
+.hist-icon { width:16px; height:16px; border-radius:50%; border:1px solid #E2E8F0; color:#94A3B8; font-size:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.tag { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:2px 8px; border-radius:999px; }
+.tag.auto { background:#E0F8FF; color:#067484; }
+.tag.calc { background:#F1F5F9; color:#475569; }
+.input-pill { border:1px solid #E2E8F0; border-radius:999px; padding:9px 16px; font-size:13px; color:#0F172A; background:#fff; width:100%; font-family:inherit; }
+.input-pill:focus { outline:none; border:1.5px solid #00C4E0; box-shadow:0 0 0 3px #E0F8FF; }
+.flag { font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; text-align:center; }
+.flag.normal { background:#D1FAE5; color:#047857; }
+.flag.high { background:#FEF3C7; color:#B45309; }
+.flag.low { background:#DBEAFE; color:#1D4ED8; }
+.unit { font-size:11.5px; color:#94A3B8; }
+.range { font-size:10.5px; font-weight:700; color:#607089; white-space:nowrap; }
+
+.kbd-hint { font-size:10.5px; color:#067484; font-weight:700; margin-top:14px; }
+
+.btn-row { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+.btn-ghost { background:#fff; border:1px solid #E2E8F0; color:#0D1B36; padding:10px 22px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:pointer; }
+.btn-primary { background:#00C4E0; border:none; color:#0D1B36; padding:10px 22px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:pointer; }
+
+/* evidence-gallery component */
+.gallery { border:1px solid #E2E8F0; border-radius:12px; background:#fff; padding:16px; display:flex; gap:14px; flex-wrap:wrap; }
+.gallery-item { width:190px; border-radius:10px; border:1px solid #E2E8F0; overflow:hidden; background:#F8FAFF; }
+.gallery-item .thumb { height:110px; background:linear-gradient(135deg,#0D1B36,#1B3A66); display:flex; align-items:center; justify-content:center; color:#00C4E0; font-size:11px; font-weight:700; letter-spacing:.03em; position:relative; }
+.gallery-item .handle { position:absolute; top:6px; left:6px; color:rgba(255,255,255,0.7); font-size:12px; letter-spacing:1px; cursor:grab; }
+.gallery-item .cap { padding:8px 10px; font-size:11.5px; font-weight:600; color:#0F172A; }
+.gallery-item .cap .n { display:block; font-size:9.5px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.gallery-add { width:190px; border-radius:10px; border:1.5px dashed #E2E8F0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; color:#94A3B8; font-size:12px; font-weight:700; min-height:154px; }
+.gallery-add .plus { font-size:22px; color:#00C4E0; }
+.preview-note { font-size:11.5px; color:#607089; margin-top:12px; display:flex; align-items:center; gap:6px; }
+.preview-note .dot { width:6px; height:6px; border-radius:50%; background:#10B981; }
+</style>
+</head>
+<body>
+
+<div class="rationale">
+  <h1>Pantalla clave — Captura de Resultados</h1>
+  <p>La pantalla más compleja del flujo (EXPERIENCE.md, Flujo 2). La Sección A muestra el estudio Química Sanguínea 27 listo para capturar — campos de analitos navegables con Tab, etiquetado de valores provenientes del equipo ("Automático") frente a valores calculados ("Calculado"), el rango de referencia siempre visible junto a cada valor, y un campo de LDL calculado que sigue siendo editable. La Sección B muestra la galería de evidencias del estudio de Urocultivo en uso — dos recortes de antibiograma, reordenados por arrastre según el flujo descrito.</p>
+</div>
+
+<div class="browser-frame">
+  <div class="browser-chrome">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="url-bar">laboratoriocentral.quimiaio.com/captura/ORD-03910</div>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo"><b>Quimia</b> <span>IO</span></div>
+      <nav>
+        <a><span class="ic">▦</span>Dashboard</a>
+        <a><span class="ic">◔</span>Pacientes</a>
+        <a><span class="ic">✎</span>Recepción</a>
+        <a><span class="ic">▤</span>Pipeline</a>
+        <a class="active"><span class="ic">✓</span>Captura</a>
+        <a><span class="ic">➤</span>Entrega</a>
+        <a><span class="ic">✚</span>Doctores</a>
+        <a><span class="ic">▣</span>Empresas</a>
+        <a><span class="ic">$</span>Caja</a>
+        <a><span class="ic">▲</span>Reportes</a>
+        <a><span class="ic">⚙</span>Configuración</a>
+      </nav>
+      <div class="foot">Plan Red · v2.4.1</div>
+    </aside>
+    <div class="main-col">
+      <div class="topbar">
+        <div class="branch-chip">Laboratorio Central · Sucursal Polanco <span class="car">▾</span></div>
+        <div class="top-right">
+          <div class="cash-status"><span class="pulse"></span>Caja abierta · desde 07:58 am</div>
+          <div class="user-badge">
+            <div class="avatar">SC</div>
+            <div class="user-meta"><div class="name">Q.F.B. Sofía Camacho</div><div class="role">Químico</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <h1 class="page-title">Captura de Resultados</h1>
+        <div class="subtitle">Folio ORD-03910 · Lucía Andrade · 3 estudios en esta orden</div>
+
+        <div class="order-bar">
+          <span class="studychip"><span class="handle">⋮⋮</span>Biometría Hemática <span class="st draft">Guardado (borrador)</span></span>
+          <span class="studychip current"><span class="handle">⋮⋮</span>Química Sanguínea 27 <span class="st progress">En captura</span></span>
+          <span class="studychip"><span class="handle">⋮⋮</span>Urocultivo <span class="st progress">En captura</span></span>
+        </div>
+
+        <!-- Section A — form ready to fill, keyboard-first, calculated analyte editable -->
+        <div class="card-panel">
+          <div class="section-title">Química Sanguínea 27 <span class="sub">Analitos numéricos</span></div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Glucosa<span class="tag auto">Automático</span></div>
+            <input class="input-pill" value="92" />
+            <span class="unit">mg/dL</span>
+            <span class="range">70–100</span>
+            <span class="flag normal">Normal</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Colesterol total<span class="tag auto">Automático</span></div>
+            <input class="input-pill" value="210" />
+            <span class="unit">mg/dL</span>
+            <span class="range">&lt; 200</span>
+            <span class="flag high">Alto</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Triglicéridos<span class="tag auto">Automático</span></div>
+            <input class="input-pill" value="150" />
+            <span class="unit">mg/dL</span>
+            <span class="range">&lt; 150</span>
+            <span class="flag normal">Normal</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>HDL<span class="tag auto">Automático</span></div>
+            <input class="input-pill" value="45" />
+            <span class="unit">mg/dL</span>
+            <span class="range">&gt; 40</span>
+            <span class="flag normal">Normal</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>LDL (calculado)<span class="tag calc">Calculado</span></div>
+            <input class="input-pill" value="135" />
+            <span class="unit">mg/dL</span>
+            <span class="range">&lt; 100</span>
+            <span class="flag high">Alto</span>
+          </div>
+          <div class="kbd-hint">⇥ Tab → siguiente campo · corregir un analito de entrada invalida y reabre el estudio para revalidación</div>
+          <div class="btn-row">
+            <button class="btn-ghost">Guardar</button>
+            <button class="btn-primary">Validar</button>
+          </div>
+        </div>
+
+        <!-- Section B — evidence gallery in use -->
+        <div class="card-panel">
+          <div class="section-title">Urocultivo <span class="sub">Analito de imagen — evidencia múltiple</span></div>
+          <div class="gallery">
+            <div class="gallery-item">
+              <div class="thumb"><span class="handle">⋮⋮</span>ANTIBIOGRAMA.PDF</div>
+              <div class="cap">Antibiograma — E. coli<span class="n">Orden de impresión 1</span></div>
+            </div>
+            <div class="gallery-item">
+              <div class="thumb"><span class="handle">⋮⋮</span>ANTIBIOGRAMA.PDF</div>
+              <div class="cap">Antibiograma — Klebsiella pneumoniae<span class="n">Orden de impresión 2</span></div>
+            </div>
+            <div class="gallery-add"><span class="plus">+</span>Agregar evidencia</div>
+          </div>
+          <div class="preview-note"><span class="dot"></span>Vista previa en vivo — así se imprimirá en el PDF final</div>
+          <div class="kbd-hint">⇥ Tab para enfocar una evidencia · Ctrl+↑ / Ctrl+↓ para reordenar sin mouse</div>
+          <div class="btn-row">
+            <button class="btn-ghost">Guardar</button>
+            <button class="btn-primary">Validar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quimia IO — Dirección: Clinical Crisp</title>
+<style>
+/*
+  DIRECCIÓN 2 — CLINICAL CRISP
+  Tokens de marca usados en esta dirección:
+  --primary:    #0D1B36
+  --accent:     #00C4E0
+  --accent-lt:  #E0F8FF
+  --bg:         #F0F6FF  (mismo fondo claro, tratado como herramienta de alta densidad)
+  --text:       #0F172A
+  --gray:       #64748B
+  --border:     #E2E8F0
+  --ok:         #10B981
+  --warn:       #F59E0B
+  --error:      #EF4444
+  Personalidad: reglas de 1px, radios de 4-6px, tablas compactas, cero decoración, escaneo rápido.
+*/
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #DCE3ED;
+  color:#0F172A;
+  padding: 28px 0 70px;
+  font-size:13px;
+}
+.rationale {
+  max-width:1280px; margin:0 auto 18px; padding:16px 24px;
+  background:#fff; border:1px solid #CBD5E1; border-left:4px solid #0D1B36;
+}
+.rationale h1 { font-size:14px; color:#0D1B36; margin-bottom:5px; }
+.rationale p { font-size:12.5px; color:#475569; line-height:1.55; }
+
+.browser-frame {
+  width:1280px; margin:0 auto 24px; border:1px solid #94A3B8;
+  background:#F0F6FF;
+}
+.browser-chrome {
+  height:32px; background:#fff; display:flex; align-items:center; padding:0 12px; gap:6px;
+  border-bottom:1px solid #CBD5E1;
+}
+.browser-chrome .dot { width:8px; height:8px; border-radius:50%; background:#CBD5E1; }
+.url-bar { flex:1; margin-left:10px; height:20px; background:#F0F6FF; border:1px solid #E2E8F0; display:flex; align-items:center; padding:0 10px; font-size:11px; color:#64748B; }
+
+.app-shell { display:flex; min-height:800px; }
+
+.sidebar { width:196px; background:#fff; padding:14px 0; border-right:1px solid #CBD5E1; }
+.logo { font-size:16px; margin:2px 16px 18px; }
+.logo b { font-weight:300; color:#0D1B36; } .logo span { font-weight:800; color:#00C4E0; }
+.sidebar nav a { display:flex; align-items:center; gap:9px; padding:8px 16px; font-size:12px; color:#334155; text-decoration:none; font-weight:600; border-left:3px solid transparent; }
+.sidebar nav a .ic { width:14px; text-align:center; font-size:12px; color:#94A3B8; }
+.sidebar nav a.active { background:#F8FAFF; border-left-color:#00C4E0; color:#0D1B36; }
+.sidebar nav a.active .ic { color:#00C4E0; }
+.sidebar .foot { margin-top:16px; padding:10px 16px; font-size:10px; color:#94A3B8; border-top:1px solid #E2E8F0; }
+
+.main-col { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar { height:48px; background:#fff; border-bottom:1px solid #CBD5E1; display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
+.branch-chip { font-size:12px; font-weight:700; color:#0D1B36; border:1px solid #CBD5E1; padding:4px 10px; }
+.branch-chip .car { color:#00A6C4; }
+.top-right { display:flex; align-items:center; gap:14px; }
+.cash-status { display:flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid #FCA5A5; background:#FEF2F2; color:#B91C1C; font-size:11px; font-weight:700; }
+.cash-status .sq { width:6px; height:6px; background:#EF4444; }
+.user-badge { display:flex; align-items:center; gap:8px; }
+.avatar { width:26px; height:26px; background:#0D1B36; color:#00C4E0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; }
+.user-meta .name { font-size:11.5px; font-weight:700; color:#0D1B36; }
+.user-meta .role { font-size:9.5px; color:#00A6C4; font-weight:700; text-transform:uppercase; }
+
+.main { padding:16px 20px 24px; flex:1; overflow:auto; }
+.main h1.page-title { font-size:15px; color:#0D1B36; }
+.main .subtitle { font-size:11px; color:#64748B; margin-bottom:14px; }
+
+.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:#CBD5E1; border:1px solid #CBD5E1; }
+.kpi-card { background:#fff; padding:12px 14px; }
+.kpi-card .label { font-size:10.5px; color:#64748B; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+.kpi-card .value { font-size:24px; font-weight:800; color:#0D1B36; margin-top:4px; font-variant-numeric:tabular-nums; }
+.kpi-card .delta { font-size:10px; margin-top:3px; font-weight:700; color:#64748B; }
+.kpi-card .delta.warn { color:#B45309; }
+
+.critical-alert { margin-top:12px; padding:10px 14px; background:#FEF2F2; border:1px solid #EF4444; display:flex; align-items:center; justify-content:space-between; }
+.critical-alert .left { display:flex; align-items:center; gap:10px; }
+.critical-alert .t1 { font-size:12px; font-weight:800; color:#B91C1C; }
+.critical-alert .t2 { font-size:11px; color:#7F1D1D; }
+.critical-alert button { background:#EF4444; color:#fff; border:none; padding:6px 14px; font-size:11px; font-weight:700; }
+
+.section-title { font-size:11.5px; font-weight:800; color:#0D1B36; text-transform:uppercase; letter-spacing:.03em; margin:16px 0 8px; display:flex; justify-content:space-between; }
+.section-title .link { font-size:10.5px; color:#00A6C4; text-transform:none; }
+
+.kanban-row { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:#CBD5E1; border:1px solid #CBD5E1; }
+.kanban-col { background:#F8FAFF; padding:8px; }
+.kanban-col h3 { font-size:9.5px; text-transform:uppercase; color:#64748B; font-weight:800; display:flex; justify-content:space-between; margin-bottom:6px; }
+.kanban-col h3 .n { background:#0D1B36; color:#fff; padding:0 6px; }
+.kcard { background:#fff; border:1px solid #E2E8F0; padding:6px 8px; margin-bottom:5px; }
+.kcard .folio { font-size:10.5px; font-weight:800; color:#0D1B36; font-variant-numeric:tabular-nums; }
+.kcard .pt { font-size:10px; color:#64748B; }
+.kcard .time { font-size:9.5px; font-weight:700; color:#94A3B8; margin-top:3px; }
+.kcard.aging { border-color:#EF4444; background:#FEF2F2; }
+.kcard.aging .time { color:#DC2626; }
+
+.bottom-row { display:flex; gap:1px; margin-top:14px; background:#CBD5E1; border:1px solid #CBD5E1; }
+.card-panel { background:#fff; padding:12px 14px; }
+.recent { flex:2; }
+table { width:100%; border-collapse:collapse; font-size:11.5px; }
+th { text-align:left; font-size:9.5px; color:#94A3B8; font-weight:800; text-transform:uppercase; padding-bottom:6px; border-bottom:1px solid #CBD5E1; }
+td { padding:6px 4px; border-bottom:1px solid #EEF2F7; color:#1E293B; font-variant-numeric:tabular-nums; }
+tr.row-aging td { background:#FEF2F2; }
+.pill { padding:1px 8px; font-size:9.5px; font-weight:800; border:1px solid transparent; }
+.pill.recepcion { background:#EFF6FF; color:#2563EB; border-color:#BFDBFE; }
+.pill.analisis { background:#FEF3C7; color:#B45309; border-color:#FDE68A; }
+.pill.validado { background:#E0F8FF; color:#0891A6; border-color:#A5E9F5; }
+.pill.entregado { background:#D1FAE5; color:#047857; border-color:#A7F3D0; }
+
+.secondary { flex:1; }
+.secondary h3 { font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase; margin-bottom:8px; }
+.thumb-form { border:1px solid #CBD5E1; padding:10px; }
+.thumb-field { background:#F8FAFF; border:1px solid #E2E8F0; padding:6px 8px; font-size:10.5px; color:#94A3B8; margin-bottom:5px; }
+.thumb-field.focus { border-color:#00C4E0; color:#0D1B36; }
+.kbd-hint { font-size:9.5px; color:#00A6C4; font-weight:700; margin-top:6px; }
+
+.mobile-wrap { display:flex; justify-content:flex-end; max-width:1280px; margin:0 auto; }
+.mobile-hint { width:200px; }
+.mobile-hint .label { font-size:10px; color:#64748B; margin-bottom:6px; text-align:right; }
+.phone { width:200px; background:#fff; padding:8px; border:6px solid #0D1B36; }
+.phone .p-top { display:flex; justify-content:space-between; padding:2px 4px 8px; }
+.phone .p-top .logo2 { font-size:10px; }
+.phone .p-top .logo2 b{font-weight:300;color:#0D1B36;} .phone .p-top .logo2 span{font-weight:800;color:#00C4E0;}
+.phone .p-kpis { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:6px; }
+.phone .p-kpi { background:#F0F6FF; border:1px solid #E2E8F0; padding:5px; }
+.phone .p-kpi .v { font-size:13px; font-weight:800; color:#0D1B36; }
+.phone .p-kpi .l { font-size:7.5px; color:#64748B; }
+.phone .p-alert { background:#FEF2F2; border:1px solid #EF4444; padding:5px; font-size:8px; color:#B91C1C; font-weight:700; margin-bottom:6px; }
+.phone .p-tabs { display:flex; justify-content:space-around; border-top:1px solid #E2E8F0; padding-top:6px; }
+.phone .p-tabs span { font-size:7px; color:#94A3B8; }
+.phone .p-tabs span.on { color:#00C4E0; font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="rationale">
+  <h1>Dirección 2 — "Clinical Crisp"</h1>
+  <p>Esta dirección conserva el fondo claro de marca pero lo trata como una herramienta de trabajo intensivo: reglas de 1px, radios casi inexistentes y tablas compactas priorizan la densidad de información y el escaneo rápido sobre el aire visual. Es la apuesta correcta si la eficiencia diaria del químico y del recepcionista —que revisan decenas de folios por hora, según el requisito de "búsqueda instantánea" y órdenes creadas en menos de 2 minutos— pesa más que la calidez decorativa.</p>
+</div>
+
+<div class="browser-frame">
+  <div class="browser-chrome">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="url-bar">labcentral.quimiaio.com/dashboard</div>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo"><b>Quimia</b> <span>IO</span></div>
+      <nav>
+        <a class="active"><span class="ic">▦</span>Dashboard</a>
+        <a><span class="ic">◔</span>Pacientes</a>
+        <a><span class="ic">✎</span>Recepción</a>
+        <a><span class="ic">▤</span>Pipeline</a>
+        <a><span class="ic">✓</span>Captura</a>
+        <a><span class="ic">➤</span>Entrega</a>
+        <a><span class="ic">✚</span>Doctores</a>
+        <a><span class="ic">▣</span>Empresas</a>
+        <a><span class="ic">$</span>Caja</a>
+        <a><span class="ic">▲</span>Reportes</a>
+        <a><span class="ic">⚙</span>Configuración</a>
+      </nav>
+      <div class="foot">Plan Red · v2.4.1</div>
+    </aside>
+    <div class="main-col">
+      <div class="topbar">
+        <div class="branch-chip">Laboratorio Central · Sucursal Polanco <span class="car">▾</span></div>
+        <div class="top-right">
+          <div class="cash-status"><span class="sq"></span>Caja cerrada — abrir para crear órdenes</div>
+          <div class="user-badge">
+            <div class="avatar">ER</div>
+            <div class="user-meta"><div class="name">Elena Reyes</div><div class="role">Admin</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <h1 class="page-title">Dashboard — Sucursal Polanco</h1>
+        <div class="subtitle">Jueves 10 jul 2026, 08:14 am</div>
+
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="label">Órdenes del día</div><div class="value">47</div><div class="delta">+5 vs. prom. semanal</div></div>
+          <div class="kpi-card"><div class="label">Muestras en análisis</div><div class="value">23</div><div class="delta warn">3 &gt; 90 min</div></div>
+          <div class="kpi-card"><div class="label">Resultados por validar</div><div class="value">15</div><div class="delta">Químico: A. Solís</div></div>
+          <div class="kpi-card"><div class="label">Entregas pendientes</div><div class="value">9</div><div class="delta warn">2 con adeudo</div></div>
+        </div>
+
+        <div class="critical-alert">
+          <div class="left">
+            <div>⚠</div>
+            <div>
+              <div class="t1">VALOR CRÍTICO — Potasio 6.8 mEq/L</div>
+              <div class="t2">ORD-03871 · Juan Pérez López · capturó Q.F.B. S. Camacho</div>
+            </div>
+          </div>
+          <button>Confirmar</button>
+        </div>
+
+        <div class="section-title">Pipeline del día<span class="link">Ver tablero completo →</span></div>
+        <div class="kanban-row">
+          <div class="kanban-col"><h3>Recepción<span class="n">8</span></h3>
+            <div class="kcard"><div class="folio">ORD-03918</div><div class="pt">R. Nava Cruz</div><div class="time">4 min</div></div>
+            <div class="kcard"><div class="folio">ORD-03919</div><div class="pt">Grupo Vallarta</div><div class="time">2 min</div></div>
+            <div class="kcard"><div class="folio">ORD-03920</div><div class="pt">A. Medina</div><div class="time">1 min</div></div>
+          </div>
+          <div class="kanban-col"><h3>Muestra recibida<span class="n">12</span></h3>
+            <div class="kcard"><div class="folio">ORD-03902</div><div class="pt">Carla Domínguez</div><div class="time">18 min</div></div>
+            <div class="kcard"><div class="folio">ORD-03899</div><div class="pt">I. Ramírez</div><div class="time">31 min</div></div>
+          </div>
+          <div class="kanban-col"><h3>En análisis<span class="n">23</span></h3>
+            <div class="kcard aging"><div class="folio">ORD-03871</div><div class="pt">Juan Pérez López</div><div class="time">96 min · fuera de rango</div></div>
+            <div class="kcard"><div class="folio">ORD-03910</div><div class="pt">Lucía Andrade</div><div class="time">22 min</div></div>
+            <div class="kcard"><div class="folio">ORD-03908</div><div class="pt">O. Salcido</div><div class="time">47 min</div></div>
+          </div>
+          <div class="kanban-col"><h3>Validado<span class="n">15</span></h3>
+            <div class="kcard"><div class="folio">ORD-03905</div><div class="pt">María F. Ruiz</div><div class="time">Listo</div></div>
+            <div class="kcard"><div class="folio">ORD-03888</div><div class="pt">J. Cabrera</div><div class="time">Listo</div></div>
+          </div>
+          <div class="kanban-col"><h3>Entregado<span class="n">34</span></h3>
+            <div class="kcard"><div class="folio">ORD-03918</div><div class="pt">R. Nava Cruz</div><div class="time">PDF enviado</div></div>
+          </div>
+        </div>
+
+        <div class="bottom-row">
+          <div class="card-panel recent">
+            <div class="section-title" style="margin-top:0;">Órdenes recientes</div>
+            <table>
+              <tr><th>Folio</th><th>Paciente / Empresa</th><th>Estudios</th><th>Estado</th><th>Total</th></tr>
+              <tr class="row-aging"><td>ORD-03871</td><td>Juan Pérez López</td><td>BH, QS 27, EGO</td><td><span class="pill analisis">En análisis</span></td><td>$1,240</td></tr>
+              <tr><td>ORD-03905</td><td>María Fernanda Ruiz</td><td>Perfil tiroideo</td><td><span class="pill validado">Validado</span></td><td>$980</td></tr>
+              <tr><td>ORD-03912</td><td>Grupo Empresarial Vallarta</td><td>QS 27 × 5</td><td><span class="pill recepcion">Recepción</span></td><td>$4,500</td></tr>
+              <tr><td>ORD-03918</td><td>Roberto Nava Cruz</td><td>PCR COVID-19</td><td><span class="pill entregado">Entregado</span></td><td>$650</td></tr>
+              <tr><td>ORD-03899</td><td>Ismael Ramírez</td><td>Perfil hepático</td><td><span class="pill recepcion">Recepción</span></td><td>$720</td></tr>
+              <tr><td>ORD-03888</td><td>Julieta Cabrera</td><td>BH, VSG</td><td><span class="pill validado">Validado</span></td><td>$410</td></tr>
+            </table>
+          </div>
+          <div class="card-panel secondary">
+            <h3>Vista previa: Recepción</h3>
+            <div class="thumb-form">
+              <div class="thumb-field focus">Buscar por folio, nombre o teléfono…</div>
+              <div class="thumb-field">Doctor referente (opcional)</div>
+              <div class="thumb-field">Estudios — búsqueda instantánea</div>
+              <div class="thumb-field">Método de pago</div>
+              <div class="kbd-hint">⇥ Tab · ⏎ Enter → guardar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-wrap">
+  <div class="mobile-hint">
+    <div class="label">Vista móvil — Dashboard</div>
+    <div class="phone">
+      <div class="p-top"><div class="logo2"><b>Quimia</b> <span>IO</span></div><span style="font-size:12px;">☰</span></div>
+      <div class="p-kpis">
+        <div class="p-kpi"><div class="v">47</div><div class="l">Órdenes hoy</div></div>
+        <div class="p-kpi"><div class="v">15</div><div class="l">Por validar</div></div>
+      </div>
+      <div class="p-alert">⚠ Caja cerrada</div>
+      <div class="p-tabs"><span class="on">Inicio</span><span>Pipeline</span><span>Caja</span><span>Más</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

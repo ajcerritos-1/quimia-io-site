@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quimia IO — Key Screen: Critical Value + Correction History</title>
+<style>
+/*
+  KEY SCREEN 4/4 — CRITICAL-VALUE ACKNOWLEDGMENT + CORRECTION-HISTORY OVERLAY (highest-risk state)
+  Illustrates:
+  - DESIGN.md Components: critical-alert (CORRECTED spec — white surface, rounded-lg, card shadow, 4px
+    {colors.error} left-edge border, NOT a full error fill; headline in {colors.error-text}; contains the one
+    button-primary exception noted in Do's/Don'ts — "Confirmar lectura" renders as button-critical, the single
+    action that resolves the blocking state), correction-history-popover (white surface, rounded-md, card shadow
+    0 2px 12px rgba(13,27,54,0.05), compact inline popover anchored to one analyte's history icon — distinct
+    from a full modal), input-pill, status-pill
+  - EXPERIENCE.md State Patterns: Critical-value acknowledgment (FR-29 — blocks study validation until an explicit,
+    attributable chemist action, not a passive dismiss) and Correction/change history (who/when/before→after,
+    complements — does not replace — the system-wide Auditoría/Bitácora log, module 14)
+  - EXPERIENCE.md Component Patterns: Correction history popover behavioral spec
+  - EXPERIENCE.md Voice and Tone: exact copy "Valor crítico sin confirmar — Potasio 6.8 mEq/L" and
+    "Validado por Dr. Aarón Solís · 14:32" — quoted verbatim from the Do column
+  - PRD FR-29 (critical/panic threshold flag + explicit chemist acknowledgment), FR-52 (audit-logged correction)
+  - Continuity: same Juan Pérez López / Potasio critical value shown on the Dashboard mock; same María Fernanda
+    Ruiz / Perfil tiroideo order flagged with a correction on the Kanban mock — both resolved here in the
+    results-capture surface where both patterns actually live per EXPERIENCE.md
+*/
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background:#E4E9F2; color:#0F172A; padding:32px 0 60px;
+}
+.rationale { max-width:1280px; margin:0 auto 20px; padding:16px 28px; background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(13,27,54,0.06); }
+.rationale h1 { font-size:14px; color:#0D1B36; margin-bottom:4px; }
+.rationale p { font-size:12.5px; color:#607089; line-height:1.6; }
+
+.browser-frame { width:1280px; margin:0 auto; border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(13,27,54,0.16); background:#F0F6FF; }
+.browser-chrome { height:40px; background:#0B1730; display:flex; align-items:center; padding:0 16px; gap:8px; }
+.dot { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,0.15); }
+.url-bar { flex:1; margin-left:14px; height:26px; border-radius:999px; background:rgba(255,255,255,0.08); display:flex; align-items:center; padding:0 16px; font-size:12px; color:#9AA8BF; }
+
+.app-shell { display:flex; min-height:900px; }
+
+.sidebar { width:232px; background:#0D1B36; padding:20px 14px; display:flex; flex-direction:column; }
+.logo { font-size:20px; margin:4px 10px 26px; }
+.logo b { font-weight:300; color:#E7ECF5; } .logo span { font-weight:800; color:#00C4E0; }
+.sidebar nav { display:flex; flex-direction:column; gap:3px; }
+.sidebar nav a { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; font-size:13.5px; color:#8291A8; font-weight:600; text-decoration:none; }
+.sidebar nav a .ic { width:18px; text-align:center; font-size:14px; color:#4B5A73; }
+.sidebar nav a.active { background:rgba(0,196,224,0.14); color:#fff; }
+.sidebar nav a.active .ic { color:#00C4E0; }
+.sidebar .foot { margin-top:auto; padding:14px 10px; font-size:11px; color:#3E4C66; }
+
+.main-col { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar { height:68px; background:#0F2044; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 28px; }
+.branch-chip { display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(255,255,255,0.06); border-radius:999px; font-size:13px; font-weight:600; color:#E7ECF5; }
+.branch-chip .car { color:#00C4E0; }
+.top-right { display:flex; align-items:center; gap:18px; }
+.cash-status { display:flex; align-items:center; gap:8px; padding:7px 16px; border-radius:999px; background:rgba(16,185,129,0.16); color:#5EEAD4; font-size:12.5px; font-weight:700; }
+.cash-status .pulse { width:8px; height:8px; border-radius:50%; background:#10B981; }
+.user-badge { display:flex; align-items:center; gap:10px; }
+.avatar { width:36px; height:36px; border-radius:50%; background:#00C4E0; color:#0D1B36; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; }
+.user-meta .name { font-size:13px; font-weight:700; color:#fff; }
+.user-meta .role { font-size:11px; color:#00C4E0; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+
+.main { padding:26px 28px 32px; flex:1; overflow:auto; background:#F0F6FF; position:relative; }
+.main h1.page-title { font-size:20px; font-weight:700; color:#0D1B36; }
+.main .subtitle { font-size:13px; color:#607089; margin-bottom:20px; }
+
+.card-panel { background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 2px 12px rgba(13,27,54,0.05); margin-bottom:22px; }
+.section-title { font-size:14.5px; font-weight:700; color:#0D1B36; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+.section-title .sub { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#94A3B8; }
+
+/* critical-alert — corrected component spec */
+.critical-alert {
+  padding:16px 20px; border-radius:16px; background:#FFFFFF;
+  border-left:4px solid #EF4444; box-shadow:0 2px 12px rgba(13,27,54,0.05);
+  display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px;
+}
+.critical-alert .t1 { font-size:13.5px; font-weight:800; color:#B91C1C; }
+.critical-alert .t2 { font-size:12.5px; color:#607089; margin-top:3px; }
+.critical-alert button { background:#EF4444; color:#fff; border:none; padding:10px 22px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+
+.analyte-row { display:grid; grid-template-columns:1.4fr 1fr 0.7fr 0.6fr; gap:14px; align-items:center; padding:10px 4px; border-bottom:1px solid #F1F5F9; opacity:0.55; }
+.analyte-row.blocked { opacity:1; background:#FFF7F7; border-radius:10px; padding:12px; }
+.analyte-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#0F172A; }
+.hist-icon { width:16px; height:16px; border-radius:50%; border:1px solid #E2E8F0; color:#94A3B8; font-size:9px; display:flex; align-items:center; justify-content:center; }
+.input-pill { border:1px solid #E2E8F0; border-radius:999px; padding:9px 16px; font-size:13px; color:#0F172A; background:#fff; width:100%; font-family:inherit; }
+.unit { font-size:11.5px; color:#94A3B8; }
+.flag { font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; text-align:center; }
+.flag.critical { background:#FEE2E2; color:#B91C1C; }
+.flag.normal { background:#D1FAE5; color:#047857; }
+
+.btn-row { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.btn-ghost { background:#F1F5F9; border:1px solid #E2E8F0; color:#94A3B8; padding:10px 22px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:not-allowed; }
+.btn-primary { background:#00C4E0; border:none; color:#0D1B36; padding:10px 22px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:pointer; }
+.blocked-note { font-size:11px; color:#B91C1C; font-weight:700; margin-top:6px; }
+
+/* correction-history-popover component */
+.popover-anchor { position:relative; }
+.popover {
+  position:absolute; top:38px; left:0; width:340px; background:#fff; border-radius:12px;
+  box-shadow:0 2px 12px rgba(13,27,54,0.05), 0 10px 30px rgba(13,27,54,0.14); border:1px solid #E2E8F0;
+  padding:16px 18px; z-index:5;
+}
+.popover .arrow { position:absolute; top:-7px; left:20px; width:12px; height:12px; background:#fff; border-left:1px solid #E2E8F0; border-top:1px solid #E2E8F0; transform:rotate(45deg); }
+.popover h4 { font-size:12.5px; font-weight:700; color:#0D1B36; margin-bottom:2px; }
+.popover .scope { font-size:10.5px; color:#94A3B8; margin-bottom:12px; }
+.popover .entry { padding:10px 0; border-top:1px solid #F1F5F9; }
+.popover .entry:first-of-type { border-top:none; padding-top:0; }
+.popover .who { font-size:12px; font-weight:700; color:#0F172A; }
+.popover .when { font-size:10.5px; color:#94A3B8; margin-top:1px; }
+.popover .change { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; font-weight:700; }
+.popover .before { color:#94A3B8; text-decoration:line-through; font-weight:600; }
+.popover .arrow-sep { color:#94A3B8; font-weight:400; }
+.popover .after { color:#0D1B36; }
+.popover .reason { font-size:11px; color:#607089; margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div class="rationale">
+  <h1>Key Screen — Critical Value + Correction History Overlay</h1>
+  <p>The highest-risk state, per the client's confirmation: the panic-value acknowledgment card (top) blocks Química Sanguínea 27 validation for Juan Pérez López until Q.F.B. Sofía Camacho explicitly confirms the Potasio reading — the FR-29 exception where the resolving action is button-critical, not button-primary. Below, the correction-history popover — opened from María Fernanda Ruiz's Perfil tiroideo order — shows the TSH analyte's prior correction, anchored inline rather than as a full modal.</p>
+</div>
+
+<div class="browser-frame">
+  <div class="browser-chrome">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="url-bar">laboratoriocentral.quimiaio.com/captura/ORD-03871</div>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo"><b>Quimia</b> <span>IO</span></div>
+      <nav>
+        <a><span class="ic">▦</span>Dashboard</a>
+        <a><span class="ic">◔</span>Pacientes</a>
+        <a><span class="ic">✎</span>Recepción</a>
+        <a><span class="ic">▤</span>Pipeline</a>
+        <a class="active"><span class="ic">✓</span>Captura</a>
+        <a><span class="ic">➤</span>Entrega</a>
+        <a><span class="ic">✚</span>Doctores</a>
+        <a><span class="ic">▣</span>Empresas</a>
+        <a><span class="ic">$</span>Caja</a>
+        <a><span class="ic">▲</span>Reportes</a>
+        <a><span class="ic">⚙</span>Configuración</a>
+      </nav>
+      <div class="foot">Plan Red · v2.4.1</div>
+    </aside>
+    <div class="main-col">
+      <div class="topbar">
+        <div class="branch-chip">Laboratorio Central · Sucursal Polanco <span class="car">▾</span></div>
+        <div class="top-right">
+          <div class="cash-status"><span class="pulse"></span>Caja abierta · desde 07:58 am</div>
+          <div class="user-badge">
+            <div class="avatar">SC</div>
+            <div class="user-meta"><div class="name">Q.F.B. Sofía Camacho</div><div class="role">Químico</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <h1 class="page-title">Captura de Resultados</h1>
+        <div class="subtitle">Folio ORD-03871 · Juan Pérez López · Química Sanguínea 27</div>
+
+        <!-- Critical-value acknowledgment (FR-29) -->
+        <div class="card-panel">
+          <div class="critical-alert">
+            <div>
+              <div class="t1">Valor crítico sin confirmar — Potasio 6.8 mEq/L</div>
+              <div class="t2">Paciente: Juan Pérez López · Folio ORD-2026-03871 · Capturado por Q.F.B. Sofía Camacho</div>
+            </div>
+            <button>Confirmar lectura</button>
+          </div>
+
+          <div class="analyte-row blocked">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Potasio</div>
+            <input class="input-pill" value="6.8" disabled />
+            <span class="unit">mEq/L</span>
+            <span class="flag critical">Crítico</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Sodio</div>
+            <input class="input-pill" value="139" disabled />
+            <span class="unit">mEq/L</span>
+            <span class="flag normal">Normal</span>
+          </div>
+          <div class="analyte-row">
+            <div class="analyte-label"><span class="hist-icon">↺</span>Cloro</div>
+            <input class="input-pill" value="101" disabled />
+            <span class="unit">mEq/L</span>
+            <span class="flag normal">Normal</span>
+          </div>
+
+          <div class="blocked-note">Validación bloqueada hasta confirmar el valor crítico de Potasio</div>
+          <div class="btn-row">
+            <button class="btn-ghost" disabled>Validar</button>
+          </div>
+        </div>
+
+        <!-- Correction-history popover, anchored to one analyte's history icon -->
+        <div class="card-panel">
+          <div class="section-title">Perfil tiroideo <span class="sub">María Fernanda Ruiz · Folio ORD-03905 · Validado</span></div>
+          <div class="analyte-row popover-anchor" style="opacity:1; border-bottom:none;">
+            <div class="analyte-label"><span class="hist-icon" style="background:#E0F8FF; color:#067484; border-color:#00C4E0;">↺</span>TSH</div>
+            <input class="input-pill" value="2.1" disabled />
+            <span class="unit">µUI/mL</span>
+            <span class="flag normal">Normal</span>
+
+            <div class="popover">
+              <div class="arrow"></div>
+              <h4>Historial — TSH</h4>
+              <div class="scope">Folio ORD-03905 · complementa la Auditoría/Bitácora (módulo 14)</div>
+              <div class="entry">
+                <div class="who">Q.F.B. Sofía Camacho</div>
+                <div class="when">20 de julio de 2026 · 14:32</div>
+                <div class="change"><span class="before">4.8</span><span class="arrow-sep">→</span><span class="after">2.1 µUI/mL</span></div>
+                <div class="reason">Motivo: recaptura por calibración de equipo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

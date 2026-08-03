@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quimia IO — Key Screen: Pipeline Kanban</title>
+<style>
+/*
+  KEY SCREEN 3/4 — PIPELINE KANBAN (⭐ flagship differentiator)
+  Illustrates:
+  - DESIGN.md Components: kanban-column ({colors.surface-sunken} tray, {colors.border} outline, {typography.label}
+    header + navy pill-badge count), kanban-card, kanban-card-aging (#FEF2F2 fill, 1.5px #FCA5A5 inset ring,
+    {colors.error-text} timestamp), status-pill (all six variants: recepcion, en-analisis, validado, entregado,
+    adeudo, cancelado)
+  - DESIGN.md Do's/Don'ts: one aging treatment per card (tint + ring + text-color swap together, never color alone)
+  - EXPERIENCE.md Information Architecture (Pipeline Kanban — "⭐ flagship differentiator")
+  - EXPERIENCE.md State Patterns: 5-column pipeline (Recepción → Muestra recibida → En análisis → Validado →
+    Entregado), per-study validation ("least advanced study still open"), correction/change history, manual drag
+    as correction-only (never the normal advancement path)
+  - EXPERIENCE.md Accessibility Floor: aria-label announcing aging state, not color-only
+  - PRD FR-36 (5-column board), FR-37 (folio/patient/study chips/elapsed time/responsible/color state), FR-39
+    (live count per column)
+  - JUDGMENT CALL: PRD FR-38 defines a yellow tier at 45min in addition to red at 90min, but DESIGN.md's Components
+    table explicitly defines only ONE aging variant (kanban-card-aging, red) and instructs "do not hardcode
+    45/90 min into the component" since thresholds are lab-configurable in Phase 2. No yellow variant exists in
+    DESIGN.md's Components table, so none is rendered here — only the single red aging state per the spine's own
+    direction, exactly as the chosen reference mock does.
+*/
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background:#E4E9F2; color:#0F172A; padding:32px 0 60px;
+}
+.rationale { max-width:1280px; margin:0 auto 20px; padding:16px 28px; background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(13,27,54,0.06); }
+.rationale h1 { font-size:14px; color:#0D1B36; margin-bottom:4px; }
+.rationale p { font-size:12.5px; color:#607089; line-height:1.6; }
+
+.browser-frame { width:1280px; margin:0 auto; border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(13,27,54,0.16); background:#F0F6FF; }
+.browser-chrome { height:40px; background:#0B1730; display:flex; align-items:center; padding:0 16px; gap:8px; }
+.dot { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,0.15); }
+.url-bar { flex:1; margin-left:14px; height:26px; border-radius:999px; background:rgba(255,255,255,0.08); display:flex; align-items:center; padding:0 16px; font-size:12px; color:#9AA8BF; }
+
+.app-shell { display:flex; min-height:900px; }
+
+.sidebar { width:232px; background:#0D1B36; padding:20px 14px; display:flex; flex-direction:column; }
+.logo { font-size:20px; margin:4px 10px 26px; }
+.logo b { font-weight:300; color:#E7ECF5; } .logo span { font-weight:800; color:#00C4E0; }
+.sidebar nav { display:flex; flex-direction:column; gap:3px; }
+.sidebar nav a { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; font-size:13.5px; color:#8291A8; font-weight:600; text-decoration:none; }
+.sidebar nav a .ic { width:18px; text-align:center; font-size:14px; color:#4B5A73; }
+.sidebar nav a.active { background:rgba(0,196,224,0.14); color:#fff; }
+.sidebar nav a.active .ic { color:#00C4E0; }
+.sidebar .foot { margin-top:auto; padding:14px 10px; font-size:11px; color:#3E4C66; }
+
+.main-col { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar { height:68px; background:#0F2044; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 28px; }
+.branch-chip { display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(255,255,255,0.06); border-radius:999px; font-size:13px; font-weight:600; color:#E7ECF5; }
+.branch-chip .car { color:#00C4E0; }
+.top-right { display:flex; align-items:center; gap:18px; }
+.cash-status { display:flex; align-items:center; gap:8px; padding:7px 16px; border-radius:999px; background:rgba(16,185,129,0.16); color:#5EEAD4; font-size:12.5px; font-weight:700; }
+.cash-status .pulse { width:8px; height:8px; border-radius:50%; background:#10B981; }
+.user-badge { display:flex; align-items:center; gap:10px; }
+.avatar { width:36px; height:36px; border-radius:50%; background:#00C4E0; color:#0D1B36; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; }
+.user-meta .name { font-size:13px; font-weight:700; color:#fff; }
+.user-meta .role { font-size:11px; color:#00C4E0; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+
+.main { padding:26px 28px 32px; flex:1; overflow:auto; background:#F0F6FF; }
+.main h1.page-title { font-size:20px; font-weight:700; color:#0D1B36; }
+.main .subtitle { font-size:13px; color:#607089; margin-bottom:20px; }
+
+.filters { display:flex; gap:10px; margin-bottom:18px; }
+.filter-chip { padding:8px 16px; border-radius:999px; border:1px solid #E2E8F0; background:#fff; font-size:12px; font-weight:700; color:#607089; }
+
+.kanban-row { display:grid; grid-template-columns:repeat(5,1fr); gap:18px; align-items:start; }
+.kanban-col { background:#F8FAFF; border-radius:14px; padding:14px; border:1px solid #E2E8F0; }
+.kanban-col h3 { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#607089; font-weight:700; display:flex; justify-content:space-between; margin-bottom:12px; }
+.kanban-col h3 .n { background:#0D1B36; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; }
+
+.kcard { background:#fff; border-radius:12px; padding:12px 13px; margin-bottom:10px; box-shadow:0 1px 4px rgba(13,27,54,0.05); }
+.kcard .folio { font-size:12.5px; font-weight:700; color:#0D1B36; }
+.kcard .pt { font-size:11.5px; color:#334155; margin-top:3px; font-weight:600; }
+.kcard .chips { display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+.kcard .chip { font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:999px; background:#F1F5F9; color:#607089; }
+.kcard .resp { font-size:10px; color:#94A3B8; margin-top:6px; }
+.kcard .time { font-size:10.5px; margin-top:6px; font-weight:700; color:#94A3B8; }
+.kcard .pills { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
+.kcard.aging { background:#FEF2F2; box-shadow:0 0 0 1.5px #FCA5A5 inset; }
+.kcard.aging .time { color:#B91C1C; }
+.kcard.cancel { opacity:0.72; }
+
+.pill { padding:3px 10px; border-radius:999px; font-size:10.5px; font-weight:700; }
+.pill.recepcion { background:#EFF6FF; color:#2563EB; }
+.pill.analisis { background:#FEF3C7; color:#B45309; }
+.pill.validado { background:#E0F8FF; color:#067484; }
+.pill.entregado { background:#D1FAE5; color:#047857; }
+.pill.adeudo { background:#FEF3C7; color:#92400E; }
+.pill.cancelado { background:#F1F5F9; color:#475569; }
+
+.hist-note { font-size:10px; color:#067484; font-weight:700; margin-top:6px; display:flex; align-items:center; gap:4px; }
+</style>
+</head>
+<body>
+
+<div class="rationale">
+  <h1>Key Screen — Pipeline Kanban</h1>
+  <p>The product's flagship differentiator (EXPERIENCE.md IA, "⭐ flagship differentiator"). All 5 pipeline columns per PRD FR-36, with an aging card (Juan Pérez López, tied to the Dashboard critical-value alert), a card mid-capture (Lucía Andrade, tied to the Captura mock), a validated card carrying a prior correction (María Fernanda Ruiz, tied to the overlay mock), a debt-blocked card (Ismael Ramírez, adeudo pill stacked on validado), and a cancelled order (neutral slate treatment, distinct from the debt/error red).</p>
+</div>
+
+<div class="browser-frame">
+  <div class="browser-chrome">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="url-bar">laboratoriocentral.quimiaio.com/pipeline</div>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo"><b>Quimia</b> <span>IO</span></div>
+      <nav>
+        <a><span class="ic">▦</span>Dashboard</a>
+        <a><span class="ic">◔</span>Pacientes</a>
+        <a><span class="ic">✎</span>Recepción</a>
+        <a class="active"><span class="ic">▤</span>Pipeline</a>
+        <a><span class="ic">✓</span>Captura</a>
+        <a><span class="ic">➤</span>Entrega</a>
+        <a><span class="ic">✚</span>Doctores</a>
+        <a><span class="ic">▣</span>Empresas</a>
+        <a><span class="ic">$</span>Caja</a>
+        <a><span class="ic">▲</span>Reportes</a>
+        <a><span class="ic">⚙</span>Configuración</a>
+      </nav>
+      <div class="foot">Plan Red · v2.4.1</div>
+    </aside>
+    <div class="main-col">
+      <div class="topbar">
+        <div class="branch-chip">Laboratorio Central · Sucursal Polanco <span class="car">▾</span></div>
+        <div class="top-right">
+          <div class="cash-status"><span class="pulse"></span>Caja abierta · desde 07:58 am</div>
+          <div class="user-badge">
+            <div class="avatar">PR</div>
+            <div class="user-meta"><div class="name">Paola Reséndiz</div><div class="role">Recepcionista</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <h1 class="page-title">Pipeline Kanban</h1>
+        <div class="subtitle">Tablero en vivo · Sucursal Polanco · 20 de julio de 2026</div>
+
+        <div class="filters">
+          <div class="filter-chip">Todos los químicos ▾</div>
+          <div class="filter-chip">Hoy ▾</div>
+        </div>
+
+        <div class="kanban-row">
+          <div class="kanban-col">
+            <h3>Recepción <span class="n">8</span></h3>
+            <div class="kcard">
+              <div class="folio">ORD-03918</div>
+              <div class="pt">Roberto Nava Cruz</div>
+              <div class="chips"><span class="chip">QS 27</span><span class="chip">BH</span></div>
+              <div class="resp">Registrado por Paola Reséndiz</div>
+              <div class="time">4 min</div>
+              <div class="pills"><span class="pill recepcion">Recepción</span></div>
+            </div>
+            <div class="kcard">
+              <div class="folio">ORD-03921</div>
+              <div class="pt">Grupo Empresarial Vallarta</div>
+              <div class="chips"><span class="chip">QS 27 ×5</span></div>
+              <div class="resp">Registrado por Paola Reséndiz</div>
+              <div class="time">2 min</div>
+              <div class="pills"><span class="pill recepcion">Recepción</span></div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <h3>Muestra recibida <span class="n">12</span></h3>
+            <div class="kcard">
+              <div class="folio">ORD-03902</div>
+              <div class="pt">Carla Domínguez</div>
+              <div class="chips"><span class="chip">EGO</span></div>
+              <div class="resp">Recibida por Paola Reséndiz</div>
+              <div class="time">18 min</div>
+              <div class="pills"><span class="pill recepcion">Muestra recibida</span></div>
+            </div>
+            <div class="kcard cancel">
+              <div class="folio">ORD-03888</div>
+              <div class="pt">Clínica San Ángel</div>
+              <div class="chips"><span class="chip">QS 27</span></div>
+              <div class="resp">Cancelada por el paciente</div>
+              <div class="time">Hace 3 h</div>
+              <div class="pills"><span class="pill cancelado">Cancelado</span></div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <h3>En análisis <span class="n">23</span></h3>
+            <div class="kcard aging" aria-label="En análisis, 96 minutos, fuera de rango">
+              <div class="folio">ORD-03871</div>
+              <div class="pt">Juan Pérez López</div>
+              <div class="chips"><span class="chip">QS 27</span><span class="chip">BH</span><span class="chip">EGO</span></div>
+              <div class="resp">Q.F.B. Sofía Camacho</div>
+              <div class="time">96 min · fuera de rango</div>
+              <div class="pills"><span class="pill analisis">En análisis</span></div>
+            </div>
+            <div class="kcard">
+              <div class="folio">ORD-03910</div>
+              <div class="pt">Lucía Andrade</div>
+              <div class="chips"><span class="chip">BH</span><span class="chip">QS 27</span><span class="chip">Urocultivo</span></div>
+              <div class="resp">Q.F.B. Sofía Camacho</div>
+              <div class="time">22 min</div>
+              <div class="pills"><span class="pill analisis">En análisis</span></div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <h3>Validado <span class="n">15</span></h3>
+            <div class="kcard">
+              <div class="folio">ORD-03905</div>
+              <div class="pt">María Fernanda Ruiz</div>
+              <div class="chips"><span class="chip">Perfil tiroideo</span></div>
+              <div class="resp">Validado por Q.F.B. Sofía Camacho</div>
+              <div class="time">Listo para entrega</div>
+              <div class="pills"><span class="pill validado">Validado</span></div>
+              <div class="hist-note">↺ 1 corrección registrada — TSH</div>
+            </div>
+            <div class="kcard">
+              <div class="folio">ORD-03860</div>
+              <div class="pt">Ismael Ramírez</div>
+              <div class="chips"><span class="chip">Perfil hepático</span></div>
+              <div class="resp">Validado por Q.F.B. Sofía Camacho</div>
+              <div class="time">Listo para entrega</div>
+              <div class="pills"><span class="pill validado">Validado</span><span class="pill adeudo">Adeudo</span></div>
+            </div>
+          </div>
+
+          <div class="kanban-col">
+            <h3>Entregado <span class="n">34</span></h3>
+            <div class="kcard">
+              <div class="folio">ORD-03760</div>
+              <div class="pt">Grupo Empresarial Vallarta</div>
+              <div class="chips"><span class="chip">QS 27 ×5</span></div>
+              <div class="resp">Entregado por Paola Reséndiz</div>
+              <div class="time">PDF enviado</div>
+              <div class="pills"><span class="pill entregado">Entregado</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

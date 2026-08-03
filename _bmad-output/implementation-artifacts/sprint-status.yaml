@@ -1,0 +1,133 @@
+# generated: 2026-08-02
+# last_updated: 2026-08-02
+# project: quimiaio
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-08-02
+last_updated: 2026-08-02
+project: quimiaio
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: in-progress
+  1-1-user-sign-in: ready-for-dev
+  1-2-admin-manages-users-roles: backlog
+  1-3-role-based-access-control-enforced-everywhere: backlog
+  1-4-password-policy-enforcement-nom-024-ssa3: backlog
+  1-5-base-app-shell-responsive-layout: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-supporting-catalogs-methods-techniques-equipment-containers-sample-types: backlog
+  2-2-study-catalog: backlog
+  2-3-analyte-catalog-including-calculated-formulas: backlog
+  2-4-reference-ranges-by-age-sex-with-inline-edit-audit: backlog
+  2-5-packages-profiles: backlog
+  2-6-results-pdf-header-customization: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-patient-registration: backlog
+  3-2-instant-patient-search: backlog
+  3-3-edit-patient-with-change-log: backlog
+  3-4-debt-alert-on-patient-record: backlog
+  3-5-clinical-history-with-trend-chart: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-doctor-crud: backlog
+  4-2-orders-filtered-by-doctor: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-open-cash-session: backlog
+  5-2-payments-manual-movements-register-against-the-open-session: backlog
+  5-3-close-cash-session-with-reconciliation-summary: backlog
+  5-4-historical-sessions-query-export: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-cash-session-gated-order-creation-patient-mandatory-doctor-studies: backlog
+  6-2-editable-pricing-discounts-price-overrides: backlog
+  6-3-multi-method-payment-tracked-debt: backlog
+  6-4-folio-qr-token-order-print-preview: backlog
+  6-5-sample-pending-flag-auto-route-on-receipt: backlog
+  6-6-cancel-order-admin-only: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-capture-entry-point-pending-samples-list-order-lookup: backlog
+  7-2-multi-type-analyte-capture: backlog
+  7-3-out-of-range-highlighting-critical-value-acknowledgment-gate: backlog
+  7-4-study-validation-the-single-validado-gate: backlog
+  7-5-invalidate-recapture-with-mandatory-reason-and-correction-history: backlog
+  7-6-offline-safe-capture: backlog
+  epic-7-retrospective: optional
+
+  epic-7b: backlog
+  7b-1-on-site-agent-infrastructure-ingestion-api: backlog
+  7b-2-bc-5150-protocol-connection-message-parsing: backlog
+  7b-3-bc-5150-result-mapping-ingestion-with-error-handling: backlog
+  7b-4-bs-240pro-chemistry-protocol-spike: backlog
+  7b-5-bs-240pro-protocol-connection-message-parsing: backlog
+  7b-6-bs-240pro-result-mapping-ingestion-with-error-handling: backlog
+  epic-7b-retrospective: optional
+
+  epic-8: backlog
+  8-1-five-column-board-with-automatic-state-advancement: backlog
+  8-2-card-content-drag-as-correction-audit: backlog
+  8-3-aging-time-alerts: backlog
+  8-4-board-filters-live-column-counts: backlog
+  8-5-card-click-opens-order-detail: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-delivery-list-filtered-by-date-state: backlog
+  9-2-deliver-via-print-email-hand-off-with-debt-gate: backlog
+  9-3-signature-pad-for-in-person-hand-off: backlog
+  9-4-patient-portal-dob-gated-public-result-view: backlog
+  9-5-delivery-history-of-comparable-results: backlog
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-sales-report-by-period: backlog
+  10-2-dashboard-kpis-mini-pipeline-summary: backlog
+  10-3-active-alerts-dashboard-quick-actions: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-admin-audit-log-viewer-with-cross-epic-traceability-check: backlog
+  epic-11-retrospective: optional
