@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url intentionally omitted — Prisma 7 reads the datasource URL from
+  // prisma.config.ts (DIRECT_DATABASE_URL, owner/migration role) for CLI
+  // commands. The running app never reads a datasource URL from here; it
+  // builds its own client with @prisma/adapter-pg against the pooled
+  // DATABASE_URL (app role) in src/shared/db/client.ts (AD-2, D10).
+}
+
+// Phase 1 has exactly 3 fixed roles. RBAC tables (Role, per-user roleId) are
+// deferred to Phase 2 (FR-70) — see ARCHITECTURE-SPINE.md AD-4 deferred list.
+enum UserRole {
+  admin
+  recepcionista
+  quimico
+}
+
+model Tenant {
+  id        String   @id @default(cuid(2))
+  slug      String   @unique // {lab}.quimiaio.com
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  // RLS-EXEMPT (D3): column-narrow GRANT SELECT(id, slug, isActive) only.
+  // Do not add a tenant_isolation policy to this table — see rls_roles
+  // migration and ARCHITECTURE-SPINE.md AD-2/AD-3.
+  @@map("tenant")
+}
+
+model User {
+  id            String   @id @default(cuid(2))
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email         String // NO bare @unique — multi-tenant uniqueness override (D4, AD-8)
+  nickname      String // NO bare @unique — same override (D4, AD-8)
+  name          String
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          UserRole
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, nickname])
+  @@index([tenantId])
+  // RLS + FORCE ROW LEVEL SECURITY (D5): tenant_isolation policy on
+  // current_setting('app.tenant_id'). See rls_roles migration.
+  @@map("user")
+}
+
+// Better Auth core tables — RLS-EXEMPT by design (AD-2 threat-model addendum,
+// 2026-08-02). Do not add tenant_isolation policies to these three tables;
+// isolation happens one hop later, at the User/application-data layer.
+model Session {
+  id        String   @id
+  token     String   @unique
+  userId    String
+  tenantId  String // deliberate: lets middleware reject cross-tenant session replay
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id           String    @id
+  accountId    String
+  providerId   String
+  userId       String
+  password     String? // credential hash lives HERE, not on User
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
