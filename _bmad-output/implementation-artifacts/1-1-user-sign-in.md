@@ -4,6 +4,7 @@ Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Dev execution for this story runs via SDD (openspec/changes/story-1-1-user-sign-in/), not bmad-dev-story. Task checkboxes below are kept in sync with openspec/changes/story-1-1-user-sign-in/tasks.md — that file is the source of truth for phase/subtask granularity. -->
+<!-- sdd-verify (2026-08-11) FAILED: 3 CRITICAL findings, see openspec/changes/story-1-1-user-sign-in/verify-report.md. All 32/32 SDD tasks below are implemented and honestly checked, but AC-4 is violated on the public /api/auth/[...all] route (an account-state oracle distinguishes "inactive account" from "wrong password" there, even though the UI path is compliant), plus 2 untested uniqueness scenarios. Do NOT read the checkboxes below as "story done" — archive is blocked until the CRITICAL findings are fixed and this change is re-verified. -->
 
 ## Story
 
