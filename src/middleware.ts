@@ -95,4 +95,15 @@ export async function middleware(
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Phase 7 discovery: Next.js middleware defaults to the Edge Runtime,
+  // which cannot load `node:crypto`/`node:path`/`node:url` — needed
+  // transitively via `src/shared/db`'s generated Prisma client (this
+  // middleware's own `bootstrap.resolveTenantBySlug`/
+  // `findSessionTenantByToken` calls). PR 4a never surfaced this: its
+  // integration tests call `middleware()` directly as a plain function,
+  // bypassing the Edge Runtime entirely — this is the first time the app
+  // has actually been run through `next dev`/`next start` (Phase 7's e2e
+  // harness). `runtime: "nodejs"` opts this middleware into the Node.js
+  // runtime instead — no logic change, config-only.
+  runtime: "nodejs",
 };
