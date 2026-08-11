@@ -64,11 +64,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 6: Better Auth Sign-In (TDD — integration, real Neon branch)
 
-- [ ] 6.1 Create `src/middleware.ts`: requestId, subdomain->tenantId bootstrap, `runWithContext` (D2)
+- [x] 6.1 Create `src/middleware.ts`: requestId, subdomain->tenantId bootstrap, `runWithContext` (D2)
 - [x] 6.2 RED: wrong password / inactive user / inactive tenant return identical `AUTH_INVALID_CREDENTIALS` -> GREEN: `src/modules/auth/server/auth.ts` (D11)
 - [x] 6.3 RED: nickname resolves to email inside scoped tx -> GREEN: `src/modules/auth/server/sign-in.action.ts` (D7)
 - [x] 6.4 RED: same email succeeds across two tenants -> GREEN: confirm composite uniqueness (D4)
-- [ ] 6.5 RED: cross-tenant session replay -> 401 -> GREEN: confirm middleware tenant check
+- [x] 6.5 RED: cross-tenant session replay -> 401 -> GREEN: confirm middleware tenant check
 - [ ] 6.6 Create `src/modules/auth/ui/sign-in-form.tsx`: shadcn form, Zod-validated
 - [ ] 6.7 Create `src/app/api/auth/[...all]/route.ts`: Better Auth handler mount
 
