@@ -35,3 +35,9 @@ next-env.d.ts
 
 # testing (Neon branch artifacts, coverage — added when Phase 3 lands)
 /coverage
+
+# Playwright (Phase 7) — ephemeral e2e Neon branch connection info, reports
+/tests/e2e/.e2e-db.json
+/playwright-report/
+/test-results/
+/blob-report/

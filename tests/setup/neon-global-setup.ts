@@ -26,7 +26,7 @@
  *
  * The Neon branch-lifecycle primitives below (`neonApi`, `buildConnectionUri`,
  * `requiredEnv`) live in `./neon-branch-lib` — extracted, unchanged, so
- * `tests/e2e/global-setup.ts` (Phase 7's Playwright harness) can reuse the
+ * `scripts/e2e/start-server.ts` (Phase 7's Playwright harness) can reuse the
  * exact same mechanism instead of re-implementing it.
  */
 import { execFileSync } from "node:child_process";

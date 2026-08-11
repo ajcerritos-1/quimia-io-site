@@ -1,7 +1,7 @@
 /**
  * Shared Neon branch-lifecycle primitives (D9, AD-9). Extracted, UNCHANGED,
  * from `neon-global-setup.ts` (which used to define these privately) so
- * `tests/e2e/global-setup.ts` (Playwright's own ephemeral-branch-per-run
+ * `scripts/e2e/start-server.ts` (Playwright's own ephemeral-branch-per-run
  * harness, Phase 7) can reuse the exact same mechanism the Vitest
  * integration harness already uses, instead of re-implementing it. Pure
  * relocation — no behavior change; `tests/integration/harness-smoke.test.ts`

@@ -69,11 +69,11 @@ Chain strategy: stacked-to-main
 - [x] 6.3 RED: nickname resolves to email inside scoped tx -> GREEN: `src/modules/auth/server/sign-in.action.ts` (D7)
 - [x] 6.4 RED: same email succeeds across two tenants -> GREEN: confirm composite uniqueness (D4)
 - [x] 6.5 RED: cross-tenant session replay -> 401 -> GREEN: confirm middleware tenant check
-- [ ] 6.6 Create `src/modules/auth/ui/sign-in-form.tsx`: shadcn form, Zod-validated
+- [x] 6.6 Create `src/modules/auth/ui/sign-in-form.tsx`: shadcn form, Zod-validated
 - [x] 6.7 Create `src/app/api/auth/[...all]/route.ts`: Better Auth handler mount
 
 ## Phase 7: E2E & Cleanup
 
-- [ ] 7.1 Playwright e2e: sign-in happy path
-- [ ] 7.2 Playwright e2e: invalid credentials -> generic message
-- [ ] 7.3 Document scheduled cleanup of stale `test-*` Neon branches (AD-9 Deferred)
+- [x] 7.1 Playwright e2e: sign-in happy path
+- [x] 7.2 Playwright e2e: invalid credentials -> generic message
+- [x] 7.3 Document scheduled cleanup of stale `test-*` Neon branches (AD-9 Deferred)
