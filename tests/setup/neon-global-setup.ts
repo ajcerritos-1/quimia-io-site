@@ -23,17 +23,27 @@
  * you cannot test-drive the harness that the first RED test depends on).
  * It is smoke-tested end-to-end by `tests/integration/harness-smoke.test.ts`
  * instead of unit-tested in isolation.
+ *
+ * The Neon branch-lifecycle primitives below (`neonApi`, `buildConnectionUri`,
+ * `requiredEnv`) live in `./neon-branch-lib` — extracted, unchanged, so
+ * `tests/e2e/global-setup.ts` (Phase 7's Playwright harness) can reuse the
+ * exact same mechanism instead of re-implementing it.
  */
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { loadEnvConfig } from "@next/env";
+import {
+  buildConnectionUri,
+  neonApi,
+  requiredEnv,
+  type NeonCreateBranchResponse,
+} from "./neon-branch-lib";
 
 // Same P1010-guard pattern as prisma.config.ts / provision-app-role.ts:
 // explicitly load .env before reading any of the vars below. Vitest does
 // not auto-load .env files the way Next.js's own dev/build process does.
 loadEnvConfig(process.cwd());
 
-const NEON_API_BASE = "https://console.neon.tech/api/v2";
 const APP_ROLE = "quimia_app";
 const DATABASE_NAME = "neondb";
 
@@ -47,67 +57,6 @@ declare module "vitest" {
 
 interface GlobalSetupContext {
   provide: <T>(key: string, value: T) => void;
-}
-
-interface NeonEndpoint {
-  host: string;
-  hosts: { read_write_pooled_host: string };
-}
-
-interface NeonCreateBranchResponse {
-  branch: { id: string };
-  endpoints: NeonEndpoint[];
-  databases: Array<{ name: string; owner_name: string }>;
-}
-
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(
-      `neon-global-setup: missing required env var ${name}. See .env.example ` +
-        "for the full list of vars this harness needs.",
-    );
-  }
-  return value;
-}
-
-async function neonApi<T>(
-  apiKey: string,
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  const res = await fetch(`${NEON_API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `neon-global-setup: Neon API ${init?.method ?? "GET"} ${path} failed ` +
-        `(${res.status}): ${body}`,
-    );
-  }
-  // 204 No Content (e.g. DELETE) has no body to parse.
-  if (res.status === 204) {
-    return undefined as T;
-  }
-  return (await res.json()) as T;
-}
-
-function buildConnectionUri(
-  host: string,
-  role: string,
-  password: string,
-  database: string,
-): string {
-  return (
-    `postgresql://${encodeURIComponent(role)}:${encodeURIComponent(password)}` +
-    `@${host}/${database}?sslmode=require`
-  );
 }
 
 export async function setup({ provide }: GlobalSetupContext) {
