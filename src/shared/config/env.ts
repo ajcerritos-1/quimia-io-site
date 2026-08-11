@@ -23,6 +23,12 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  // Better Auth config (Phase 6, design.md "Better Auth Config"). Signs and
+  // encrypts sessions/tokens — never a hardcoded default in this codebase
+  // (Better Auth itself falls back to an insecure default when unset, which
+  // is exactly the P1010-style footgun this schema exists to prevent).
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url(),
 });
 
 export type Env = z.infer<typeof envSchema>;

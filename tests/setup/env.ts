@@ -5,9 +5,20 @@
  * `process.env` writes never reach here; `inject()` is the only supported
  * channel (D9, design.md "Test Infrastructure" gotchas).
  *
- * Only wired into the integration Vitest project (`vitest.integration.config.ts`)
- * — unit tests (Phase 4) have no DB dependency and never load this file.
+ * `loadEnvConfig()` loads `.env` into THIS (worker) process — design.md's
+ * own P1010 mitigation table lists this file as one of the three callers
+ * (alongside `prisma.config.ts` and `neon-global-setup.ts`) responsible for
+ * loading env before anything reads `process.env`. Phase 4/5 never needed
+ * it (their only env var, `DATABASE_URL`, is overridden by `inject()` right
+ * below anyway); Phase 6 does, since `src/modules/auth/server/auth.ts`
+ * reads `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`, which only exist in `.env`.
+ *
+ * Order matters: `loadEnvConfig()` must run BEFORE the `DATABASE_URL`
+ * override below, or `.env`'s own (non-ephemeral) `DATABASE_URL` would win.
  */
+import { loadEnvConfig } from "@next/env";
 import { inject } from "vitest";
+
+loadEnvConfig(process.cwd());
 
 process.env.DATABASE_URL = inject("appDatabaseUrl");

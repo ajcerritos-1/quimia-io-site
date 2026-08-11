@@ -20,17 +20,30 @@ import type { Prisma } from "../../generated/prisma/client";
 import { base } from "./client";
 import type { TenantContext } from "./types";
 
+// Neon's serverless compute can cold-start (scale-from-zero) on a fresh
+// connection with latency that comfortably exceeds Prisma's own defaults
+// (`maxWait` 2s, `timeout` 5s) — discovered via a real failing run against
+// a live ephemeral branch (Phase 6 apply-progress "Deviations"): the FIRST
+// few sequential transactions in a freshly-started worker process threw
+// "Unable to start a transaction in the given time", while later ones on
+// the SAME warmed-up pool succeeded immediately. Widening both bounds costs
+// nothing on a warm connection and buys headroom for the cold case.
+const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 20_000 };
+
 function buildScopedClient(ctx: TenantContext) {
   return base.$extends({
     name: `scoped:${ctx.tenantId}:${ctx.role}`,
     query: {
       $allModels: {
         async $allOperations({ args, query }) {
-          const [, , result] = await base.$transaction([
-            base.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, TRUE)`,
-            base.$executeRaw`SELECT set_config('app.role', ${ctx.role}, TRUE)`,
-            query(args),
-          ]);
+          const [, , result] = await base.$transaction(
+            [
+              base.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, TRUE)`,
+              base.$executeRaw`SELECT set_config('app.role', ${ctx.role}, TRUE)`,
+              query(args),
+            ],
+            TRANSACTION_OPTIONS,
+          );
           return result;
         },
       },
@@ -77,8 +90,11 @@ export function transaction<T>(
   ctx: TenantContext,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
-  return base.$transaction(async (tx) => {
-    await setConfigOnTx(tx, ctx);
-    return fn(tx);
-  });
+  return base.$transaction(
+    async (tx) => {
+      await setConfigOnTx(tx, ctx);
+      return fn(tx);
+    },
+    TRANSACTION_OPTIONS,
+  );
 }
