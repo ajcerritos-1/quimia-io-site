@@ -56,11 +56,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Tenant Isolation Wrapper + RLS (TDD — integration, real Neon branch only, no mocks)
 
-- [ ] 5.1 RED: tenant-A scoped query returns 0 tenant-B rows -> GREEN: `src/shared/db/{types,client,scoped}.ts` (D5/D6)
-- [ ] 5.2 RED: unset `app.tenant_id` returns 0 rows (fail-closed) + `WITH CHECK` blocks cross-tenant insert -> GREEN: confirm policy behavior
-- [ ] 5.3 RED: bootstrap reads only `tenant(id,slug,isActive)` -> GREEN: `src/shared/db/bootstrap.ts` (D3)
-- [ ] 5.4 Create `src/shared/db/{ambient,index}.ts`: ALS-resolved Proxy client (D1), `index.ts` sole export surface
-- [ ] 5.5 RED: planted direct `prisma.<model>` import fails lint -> GREEN: confirm `eslint.config.mjs` rule
+- [x] 5.1 RED: tenant-A scoped query returns 0 tenant-B rows -> GREEN: `src/shared/db/{types,client,scoped}.ts` (D5/D6)
+- [x] 5.2 RED: unset `app.tenant_id` returns 0 rows (fail-closed) + `WITH CHECK` blocks cross-tenant insert -> GREEN: confirm policy behavior
+- [x] 5.3 RED: bootstrap reads only `tenant(id,slug,isActive)` -> GREEN: `src/shared/db/bootstrap.ts` (D3)
+- [x] 5.4 Create `src/shared/db/{ambient,index}.ts`: ALS-resolved Proxy client (D1), `index.ts` sole export surface — `bootstrap.ts`/`ambient.ts`/`index.ts` were implemented together with `scoped.ts` in 5.1's commit (index.ts needs every wrapper module to compile as one unit); 5.3/5.4's own tests are confirmation evidence against a real Neon branch, not RED-first cycles for new code
+- [x] 5.5 RED: planted direct `prisma.<model>` import fails lint -> GREEN: confirm `eslint.config.mjs` rule
 
 ## Phase 6: Better Auth Sign-In (TDD — integration, real Neon branch)
 

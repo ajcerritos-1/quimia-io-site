@@ -23,5 +23,15 @@ export default defineConfig({
     // unit-test default before Vitest reports a hang.
     testTimeout: 30_000,
     hookTimeout: 60_000,
+    // Every file that imports `src/shared/db` builds its OWN PrismaClient
+    // (and therefore its OWN pg connection pool) — Vitest isolates modules
+    // per test file. All files share the SAME single ephemeral branch (D9:
+    // branch-per-RUN, not per-file), so running files in parallel means
+    // several independent pools + concurrent $transaction calls compete for
+    // that one branch's (small, free-tier) connection budget. Running files
+    // serially keeps the "one branch per run" design intact while avoiding
+    // "Unable to start a transaction in the given time" / ECONNRESET under
+    // contention (Phase 5 deviation — see apply-progress).
+    fileParallelism: false,
   },
 });
