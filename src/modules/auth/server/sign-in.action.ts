@@ -31,6 +31,19 @@ export interface SignInSuccess {
   ok: true;
   token: string;
   userId: string;
+  /**
+   * Raw `Set-Cookie` header strings for the session Better Auth just
+   * minted (Phase 6.6). `auth.api.signInEmail` is called here as a plain
+   * in-process function call — not through `auth.handler(request)` — so
+   * nothing forwards its `Set-Cookie` to a real HTTP response on its own.
+   * A UI-facing caller (a Next.js Server Action, `submit-sign-in.action.ts`)
+   * needs these to establish a REAL browser session via `cookies().set()`
+   * (`better-auth/cookies`' own `parseSetCookieHeader`/`toCookieOptions`
+   * turn each string into `{name, value, options}`). Callers that only need
+   * the generic ok/fail contract (the existing integration tests) can keep
+   * ignoring this field — additive, not a breaking change to `SignInResult`.
+   */
+  setCookie: string[];
 }
 
 export interface SignInFailure {
@@ -106,10 +119,21 @@ export async function signIn(
       }
 
       try {
-        const result = await auth.api.signInEmail({
+        // `returnHeaders: true` (Phase 6.6) is the same shape
+        // `auth-cross-tenant-session-replay.test.ts` already uses to
+        // capture a real signed session cookie — `{headers, response}`,
+        // where `response` is the ordinary `{token, user}` body. Without
+        // this, the caller has no way to hand the browser a real cookie.
+        const { headers, response } = await auth.api.signInEmail({
           body: { email, password: input.password },
+          returnHeaders: true,
         });
-        return { ok: true, token: result.token, userId: result.user.id };
+        return {
+          ok: true,
+          token: response.token,
+          userId: response.user.id,
+          setCookie: headers.getSetCookie(),
+        };
       } catch (error) {
         // Better Auth's own APIError (wrong password) and our own
         // databaseHooks APIError (inactive user, D11) both land here —
