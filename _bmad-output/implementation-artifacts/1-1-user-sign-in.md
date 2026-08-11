@@ -34,10 +34,10 @@ so that I can access only my tenant's data through a secure, tenant-scoped sessi
   - [x] Enable RLS + `FORCE ROW LEVEL SECURITY` on `User` (and every tenant-owned table going forward)
   - [x] Create the app's runtime Postgres role as non-owner, with only the grants its RLS policies need
   - [x] Write the RLS policy reading `current_setting('app.tenant_id')`
-- [ ] Task 4: Prisma Client Extension wrapper — `src/shared/db` (AC: 2, 3)
-  - [ ] Implement scoped mode: opens a transaction, runs `SET LOCAL app.tenant_id` / `app.role` from the authenticated session before any query
-  - [ ] Implement bootstrap mode: narrowly-scoped lookup (subdomain → `tenantId`) against an RLS-exempt table/view, immediately followed by a scoped transaction
-  - [x] Forbid direct `prisma.<model>` calls outside this wrapper (enforced via `eslint.config.mjs` blocking `src/generated/prisma` imports outside `src/shared/db`; planted-violation confirmation test still pending — SDD Phase 5.5)
+- [x] Task 4: Prisma Client Extension wrapper — `src/shared/db` (AC: 2, 3)
+  - [x] Implement scoped mode: opens a transaction, runs `SET LOCAL app.tenant_id` / `app.role` from the authenticated session before any query (implemented as `set_config(..., true)` inside an array-form `$transaction`, per ARCHITECTURE-SPINE — same transaction-scoped guarantee, injection-safe)
+  - [x] Implement bootstrap mode: narrowly-scoped lookup (subdomain → `tenantId`) against an RLS-exempt table/view, immediately followed by a scoped transaction
+  - [x] Forbid direct `prisma.<model>` calls outside this wrapper (enforced via `eslint.config.mjs` blocking `src/generated/prisma` imports outside `src/shared/db`; confirmed by a planted-violation test — SDD Phase 5.5)
 - [ ] Task 5: Better Auth integration — `src/modules/auth` (AC: 1, 4)
   - [ ] Configure Better Auth with the Prisma adapter, pointed at the wrapper's bootstrap-mode client (not a raw Prisma client)
   - [ ] Implement sign-in with nickname/email + password
