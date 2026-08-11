@@ -1,8 +1,9 @@
 # Story 1.1: User Sign-In
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Dev execution for this story runs via SDD (openspec/changes/story-1-1-user-sign-in/), not bmad-dev-story. Task checkboxes below are kept in sync with openspec/changes/story-1-1-user-sign-in/tasks.md — that file is the source of truth for phase/subtask granularity. -->
 
 ## Story
 
@@ -20,30 +21,30 @@ so that I can access only my tenant's data through a secure, tenant-scoped sessi
 ## Tasks / Subtasks
 
 - [ ] Task 1: Project & environment scaffolding (AC: all — this story is first in the project; no separate scaffolding story exists, see Dev Notes)
-  - [ ] Initialize Next.js `>=16.2.11` (App Router), TypeScript 6.x strict
-  - [ ] Configure Tailwind CSS v4 + shadcn/ui (Base UI)
-  - [ ] Set up `prisma.config.ts` (Prisma 7.x requirement — no more datasource `url` in schema), `@prisma/adapter-pg`, explicit generator `output` path
-  - [ ] Provision Neon project + database; wire connection string (pooled, pgbouncer) via typed env config (Zod, `src/shared/config/`)
+  - [x] Initialize Next.js `>=16.2.11` (App Router), TypeScript 6.x strict
+  - [x] Configure Tailwind CSS v4 + shadcn/ui (Base UI)
+  - [x] Set up `prisma.config.ts` (Prisma 7.x requirement — no more datasource `url` in schema), `@prisma/adapter-pg`, explicit generator `output` path
+  - [x] Provision Neon project + database; wire connection string (pooled, pgbouncer) via typed env config (Zod, `src/shared/config/`)
   - [ ] Set up dev (local) → preview (Vercel + ephemeral Neon branch per PR) → production (Vercel + Neon main) pipeline per AD-9
-- [ ] Task 2: Core schema — `Tenant` and `User` models (AC: 1, 3)
-  - [ ] Create `Tenant` model (cuid2 id, subdomain/slug for `{lab}.quimiaio.com` resolution)
-  - [ ] Create `User` model (cuid2 id, `tenantId` FK, email/nickname, passwordHash via Better Auth, `role` field — see Dev Notes for the enum-vs-table decision this story must make)
-  - [ ] Migrate via the migration/owner role (never the app's runtime role — see AD-2)
-- [ ] Task 3: Neon RLS setup (AC: 3)
-  - [ ] Enable RLS + `FORCE ROW LEVEL SECURITY` on `User` (and every tenant-owned table going forward)
-  - [ ] Create the app's runtime Postgres role as non-owner, with only the grants its RLS policies need
-  - [ ] Write the RLS policy reading `current_setting('app.tenant_id')`
+- [x] Task 2: Core schema — `Tenant` and `User` models (AC: 1, 3)
+  - [x] Create `Tenant` model (cuid2 id, subdomain/slug for `{lab}.quimiaio.com` resolution)
+  - [x] Create `User` model (cuid2 id, `tenantId` FK, email/nickname, passwordHash via Better Auth, `role` field — see Dev Notes for the enum-vs-table decision this story must make)
+  - [x] Migrate via the migration/owner role (never the app's runtime role — see AD-2)
+- [x] Task 3: Neon RLS setup (AC: 3)
+  - [x] Enable RLS + `FORCE ROW LEVEL SECURITY` on `User` (and every tenant-owned table going forward)
+  - [x] Create the app's runtime Postgres role as non-owner, with only the grants its RLS policies need
+  - [x] Write the RLS policy reading `current_setting('app.tenant_id')`
 - [ ] Task 4: Prisma Client Extension wrapper — `src/shared/db` (AC: 2, 3)
   - [ ] Implement scoped mode: opens a transaction, runs `SET LOCAL app.tenant_id` / `app.role` from the authenticated session before any query
   - [ ] Implement bootstrap mode: narrowly-scoped lookup (subdomain → `tenantId`) against an RLS-exempt table/view, immediately followed by a scoped transaction
-  - [ ] Forbid direct `prisma.<model>` calls outside this wrapper (lint rule or code-review checklist item — no automated enforcement mechanism decided at architecture level, flag for team)
+  - [x] Forbid direct `prisma.<model>` calls outside this wrapper (enforced via `eslint.config.mjs` blocking `src/generated/prisma` imports outside `src/shared/db`; planted-violation confirmation test still pending — SDD Phase 5.5)
 - [ ] Task 5: Better Auth integration — `src/modules/auth` (AC: 1, 4)
   - [ ] Configure Better Auth with the Prisma adapter, pointed at the wrapper's bootstrap-mode client (not a raw Prisma client)
   - [ ] Implement sign-in with nickname/email + password
   - [ ] Generic failure message on bad credentials or inactive account (no field-specific hint)
-- [ ] Task 6: Structured logging & error envelope (AC: all — cross-cutting, established here for every later story to reuse)
-  - [ ] Structured JSON logging carrying `tenant_id`/`request_id` on every line
-  - [ ] API error envelope `{ error: { code, message, details? } }`
+- [x] Task 6: Structured logging & error envelope (AC: all — cross-cutting, established here for every later story to reuse)
+  - [x] Structured JSON logging carrying `tenant_id`/`request_id` on every line
+  - [x] API error envelope `{ error: { code, message, details? } }`
 
 ## Dev Notes
 
