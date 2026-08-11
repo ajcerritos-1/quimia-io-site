@@ -38,10 +38,10 @@ so that I can access only my tenant's data through a secure, tenant-scoped sessi
   - [x] Implement scoped mode: opens a transaction, runs `SET LOCAL app.tenant_id` / `app.role` from the authenticated session before any query (implemented as `set_config(..., true)` inside an array-form `$transaction`, per ARCHITECTURE-SPINE — same transaction-scoped guarantee, injection-safe)
   - [x] Implement bootstrap mode: narrowly-scoped lookup (subdomain → `tenantId`) against an RLS-exempt table/view, immediately followed by a scoped transaction
   - [x] Forbid direct `prisma.<model>` calls outside this wrapper (enforced via `eslint.config.mjs` blocking `src/generated/prisma` imports outside `src/shared/db`; confirmed by a planted-violation test — SDD Phase 5.5)
-- [ ] Task 5: Better Auth integration — `src/modules/auth` (AC: 1, 4) — server-side done (SDD Phase 6.1-6.5, 6.7); UI form (6.6, AC-1's actual entry point) still pending in PR 4b, so this task stays open until then
+- [x] Task 5: Better Auth integration — `src/modules/auth` (AC: 1, 4)
   - [x] Configure Better Auth with the Prisma adapter — correction from this task's original wording: bound to the wrapper's **scoped-mode ambient proxy** (`authPrisma`, ALS-resolved), not the bootstrap-mode client; design.md is explicit that Better Auth never uses bootstrap mode
-  - [x] Implement sign-in with nickname/email + password (server action; no UI yet — see above)
-  - [x] Generic failure message on bad credentials or inactive account (no field-specific hint) — one `AUTH_INVALID_CREDENTIALS` envelope for wrong password, unknown identifier, inactive user, and inactive tenant alike, with a dummy password verify on unknown identifiers to avoid a timing oracle
+  - [x] Implement sign-in with nickname/email + password (server action + `sign-in-form.tsx` UI, `/sign-in` page — AC-1's actual entry point)
+  - [x] Generic failure message on bad credentials or inactive account (no field-specific hint) — one `AUTH_INVALID_CREDENTIALS` envelope for wrong password, unknown identifier, inactive user, and inactive tenant alike, with a dummy password verify on unknown identifiers to avoid a timing oracle; confirmed byte-for-byte identical in the UI by Playwright e2e
 - [x] Task 6: Structured logging & error envelope (AC: all — cross-cutting, established here for every later story to reuse)
   - [x] Structured JSON logging carrying `tenant_id`/`request_id` on every line
   - [x] API error envelope `{ error: { code, message, details? } }`
