@@ -12,10 +12,14 @@ import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 const PASSWORD = "Correct-Horse-Battery-Staple-1!";
+const WRONG_PASSWORD = "totally-different-password-99";
 
 let owner: Client;
 
-async function seedTenantAndUser(client: Client) {
+async function seedTenantAndUser(
+  client: Client,
+  opts: { isActive?: boolean } = {},
+) {
   const tenantId = `tenant-route-${randomUUID()}`;
   const userId = `user-route-${randomUUID()}`;
   const email = `route-${randomUUID()}@example.com`;
@@ -24,9 +28,16 @@ async function seedTenantAndUser(client: Client) {
     [tenantId, `lab-route-${randomUUID()}`, "Route Mount Lab"],
   );
   await client.query(
-    `INSERT INTO "user" (id, "tenantId", email, nickname, name, role, "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, 'admin', now())`,
-    [userId, tenantId, email, `routeuser${randomUUID().slice(0, 8)}`, "Route User"],
+    `INSERT INTO "user" (id, "tenantId", email, nickname, name, role, "isActive", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, 'admin', $6, now())`,
+    [
+      userId,
+      tenantId,
+      email,
+      `routeuser${randomUUID().slice(0, 8)}`,
+      "Route User",
+      opts.isActive ?? true,
+    ],
   );
   const hash = await hashPassword(PASSWORD);
   await client.query(
@@ -36,6 +47,28 @@ async function seedTenantAndUser(client: Client) {
   );
   return { tenantId, userId, email };
 }
+
+function buildSignInRequest(
+  tenantId: string,
+  body: { email: string; password: string },
+): Request {
+  return new Request("http://localhost:3000/api/auth/sign-in/email", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-tenant-id": tenantId,
+      "x-request-id": `req-route-${randomUUID()}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+const AC4_GENERIC_ENVELOPE = {
+  error: {
+    code: "AUTH_INVALID_CREDENTIALS",
+    message: "Invalid credentials.",
+  },
+};
 
 beforeAll(async () => {
   owner = new Client({ connectionString: inject("ownerDatabaseUrl") });
@@ -93,5 +126,57 @@ describe("GET/POST /api/auth/[...all] — Better Auth handler mount", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toBeNull();
+  });
+
+  it("wrong password and an inactive account return byte-for-byte identical AC-4 bodies (CRITICAL-1)", async () => {
+    const { tenantId: wrongPwTenantId, email: wrongPwEmail } =
+      await seedTenantAndUser(owner);
+    const { tenantId: inactiveTenantId, email: inactiveEmail } =
+      await seedTenantAndUser(owner, { isActive: false });
+    const { POST } = await import("../../src/app/api/auth/[...all]/route");
+
+    const wrongPasswordResponse = await POST(
+      buildSignInRequest(wrongPwTenantId, {
+        email: wrongPwEmail,
+        password: WRONG_PASSWORD,
+      }),
+    );
+    const inactiveUserResponse = await POST(
+      buildSignInRequest(inactiveTenantId, {
+        email: inactiveEmail,
+        password: PASSWORD,
+      }),
+    );
+
+    expect(wrongPasswordResponse.status).toBe(401);
+    expect(inactiveUserResponse.status).toBe(401);
+
+    const wrongPasswordBody = await wrongPasswordResponse.json();
+    const inactiveUserBody = await inactiveUserResponse.json();
+
+    // The account-state oracle AC-4 forbids: an attacker MUST NOT be able to
+    // tell "wrong password" apart from "account exists but is deactivated"
+    // by inspecting the response body of this publicly-reachable route.
+    expect(wrongPasswordBody).toEqual(AC4_GENERIC_ENVELOPE);
+    expect(inactiveUserBody).toEqual(AC4_GENERIC_ENVELOPE);
+    expect(JSON.stringify(wrongPasswordBody)).toBe(
+      JSON.stringify(inactiveUserBody),
+    );
+  });
+
+  it("an unknown email also returns the identical AC-4 body (CRITICAL-1)", async () => {
+    const { tenantId } = await seedTenantAndUser(owner);
+    const { POST } = await import("../../src/app/api/auth/[...all]/route");
+
+    const response = await POST(
+      buildSignInRequest(tenantId, {
+        email: `no-such-user-${randomUUID()}@example.com`,
+        password: PASSWORD,
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body).toEqual(AC4_GENERIC_ENVELOPE);
   });
 });
