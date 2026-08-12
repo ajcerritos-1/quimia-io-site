@@ -27,7 +27,7 @@ The system MUST route every database access through `src/shared/db`. Direct `pri
 
 ### Requirement: Bootstrap Mode Is Limited to Named, Narrowly-Scoped Flows
 
-The system MUST restrict bootstrap-mode lookups to the tenant-subdomain resolution flow (this story) reading only an RLS-exempt tenant-resolution table/view, and MUST immediately open a scoped transaction afterward. No unscoped general query MAY be issued in bootstrap mode.
+The system MUST restrict bootstrap-mode lookups to two named flows, each reading only an RLS-exempt table/view and only the columns that flow needs: (1) the tenant-subdomain resolution flow, and (2) the cross-tenant session-replay guard. Both MUST immediately open a scoped transaction afterward for anything beyond their own narrow read. No unscoped general query MAY be issued in bootstrap mode, and no third flow MAY be added without amending this requirement.
 
 #### Scenario: Sign-in bootstrap lookup is narrowly scoped
 
@@ -35,6 +35,14 @@ The system MUST restrict bootstrap-mode lookups to the tenant-subdomain resoluti
 - WHEN the wrapper's bootstrap mode runs
 - THEN it queries only the columns needed to resolve `tenantId` from an RLS-exempt table/view
 - AND it immediately opens a scoped transaction (scoped mode) for everything after
+
+#### Scenario: Cross-tenant session-replay bootstrap lookup is narrowly scoped
+
+- GIVEN middleware has a request carrying a Better Auth session token and a `tenantId` already resolved from the subdomain (previous scenario)
+- WHEN the wrapper's bootstrap mode resolves which tenant that session token belongs to
+- THEN it queries only `session.tenantId`, by `token`, from the RLS-exempt `session` table — no other column, no `user` join
+- AND this lookup exists because `auth.api.getSession()` cannot serve the same purpose: under RLS, a session replayed against the wrong tenant makes the `user` join resolve to zero rows, which Better Auth treats as "no session" — indistinguishable from an anonymous request, and unable to reject the replay
+- AND the caller (middleware) uses the result only to compare `session.tenantId` against the resolved subdomain tenant and reject a mismatch; no other use of this read is authorized
 
 ### Requirement: Neon RLS Enforces Isolation on Tenant-Owned Application Data
 
