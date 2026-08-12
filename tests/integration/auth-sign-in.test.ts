@@ -44,11 +44,11 @@ async function seedTenant(
 async function seedUser(
   client: Client,
   tenantId: string,
-  opts: { email?: string; isActive?: boolean } = {},
+  opts: { email?: string; nickname?: string; isActive?: boolean } = {},
 ): Promise<SeededUser> {
   const userId = `user-signin-${randomUUID()}`;
   const email = opts.email ?? `signin-${randomUUID()}@example.com`;
-  const nickname = `signinuser${randomUUID().slice(0, 8)}`;
+  const nickname = opts.nickname ?? `signinuser${randomUUID().slice(0, 8)}`;
   await client.query(
     `INSERT INTO "user" (id, "tenantId", email, nickname, name, role, "isActive", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, 'admin', $6, now())`,
@@ -207,5 +207,33 @@ describe("signIn — multi-tenant email uniqueness (6.4, D4)", () => {
       expect(resultB.userId).toBe(userB.userId);
       expect(resultA.userId).not.toBe(resultB.userId);
     }
+  });
+});
+
+describe("signIn — multi-tenant uniqueness rejections (CRITICAL-2/CRITICAL-3, spec: Multi-Tenant Email and Nickname Uniqueness)", () => {
+  it("rejects a duplicate email within the same tenant (CRITICAL-2)", async () => {
+    const tenantId = await seedTenant(owner);
+    const sharedEmail = `dup-email-${randomUUID()}@example.com`;
+    await seedUser(owner, tenantId, { email: sharedEmail });
+
+    // Real Postgres unique-violation (23505) on the `(tenantId, email)`
+    // composite index (prisma/schema.prisma:61, migration.sql:89) — not a
+    // mocked/stubbed rejection.
+    await expect(
+      seedUser(owner, tenantId, { email: sharedEmail }),
+    ).rejects.toMatchObject({ code: "23505" });
+  });
+
+  it("rejects a duplicate nickname within the same tenant (CRITICAL-3)", async () => {
+    const tenantId = await seedTenant(owner);
+    const sharedNickname = `dupnick${randomUUID().slice(0, 8)}`;
+    await seedUser(owner, tenantId, { nickname: sharedNickname });
+
+    // Different email so only the `(tenantId, nickname)` composite index
+    // (prisma/schema.prisma:62, migration.sql:92) is exercised, not the
+    // email constraint from the previous test.
+    await expect(
+      seedUser(owner, tenantId, { nickname: sharedNickname }),
+    ).rejects.toMatchObject({ code: "23505" });
   });
 });
