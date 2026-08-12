@@ -15,6 +15,8 @@ import { APIError } from "better-auth";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { transaction } from "../../../shared/db";
 import { runWithContext } from "../../../shared/context/request-context";
+import { AppError, toErrorResponse } from "../../../shared/http/errors";
+import { logger } from "../../../shared/logging/logger";
 import { auth, AUTH_INVALID_CREDENTIALS } from "./auth";
 
 export interface SignInTenant {
@@ -75,11 +77,22 @@ async function runDummyVerify(password: string): Promise<void> {
   await verifyPassword({ hash: await getDummyHash(), password });
 }
 
+// Single API error envelope (platform-foundation spec, W1): `genericFailure`
+// derives its code/message through the SAME `AppError`/`toErrorResponse`
+// helper every other error response in this story's request path uses,
+// instead of reading `AUTH_INVALID_CREDENTIALS.code`/`.message` directly.
+// `SignInFailure`'s own `{ok, code, message}` shape is unchanged — this is
+// a real call site for the helper, not a new response shape.
 function genericFailure(): SignInFailure {
+  const { error } = toErrorResponse(
+    new AppError(AUTH_INVALID_CREDENTIALS.code, AUTH_INVALID_CREDENTIALS.message, {
+      status: 401,
+    }),
+  );
   return {
     ok: false,
-    code: AUTH_INVALID_CREDENTIALS.code,
-    message: AUTH_INVALID_CREDENTIALS.message,
+    code: error.code as typeof AUTH_INVALID_CREDENTIALS.code,
+    message: error.message,
   };
 }
 
@@ -103,6 +116,16 @@ export async function signIn(
 ): Promise<SignInResult> {
   if (!tenant || !tenant.isActive) {
     await runDummyVerify(input.password);
+    // No scoped context exists yet for an unknown/inactive tenant — log
+    // under a bare `runWithContext` so this line still carries a real
+    // `tenant_id`/`request_id` pair (platform-foundation spec, W2) rather
+    // than falling through to the logger's "unknown" defaults.
+    runWithContext(
+      { requestId, tenant: { tenantId: tenant?.tenantId ?? "unknown", role: "anonymous" } },
+      () => {
+        logger.warn({ reason: "unknown_or_inactive_tenant" }, "sign-in failed");
+      },
+    );
     return genericFailure();
   }
 
@@ -115,6 +138,7 @@ export async function signIn(
       );
       if (!email) {
         await runDummyVerify(input.password);
+        logger.warn({ reason: "unknown_identifier" }, "sign-in failed");
         return genericFailure();
       }
 
@@ -128,6 +152,7 @@ export async function signIn(
           body: { email, password: input.password },
           returnHeaders: true,
         });
+        logger.info({ userId: response.user.id }, "sign-in succeeded");
         return {
           ok: true,
           token: response.token,
@@ -143,6 +168,7 @@ export async function signIn(
         // swallowed — it propagates as a real 500, not a fake credentials
         // failure.
         if (error instanceof APIError) {
+          logger.warn({ reason: "invalid_credentials" }, "sign-in failed");
           return genericFailure();
         }
         throw error;

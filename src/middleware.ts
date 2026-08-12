@@ -18,6 +18,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { bootstrap } from "./shared/db";
 import { AUTH_INVALID_CREDENTIALS } from "./modules/auth/server/auth";
 import { extractSubdomain } from "./shared/http/subdomain";
+import { AppError, toErrorResponse } from "./shared/http/errors";
+import { logger } from "./shared/logging/logger";
+import { runWithContext } from "./shared/context/request-context";
 
 // Sentinel used when the host's subdomain does not resolve to a known,
 // active tenant. Never a valid cuid2 tenant id, so it can never
@@ -65,8 +68,18 @@ async function rejectCrossTenantSessionReplay(
 
   const session = await bootstrap.findSessionTenantByToken(token);
   if (session && session.tenantId !== resolvedTenantId) {
+    // Single API error envelope (platform-foundation spec, W1): built via
+    // the same `AppError`/`toErrorResponse` helper every other error
+    // response in this story's request path now goes through, instead of
+    // hand-rolling `{ error: AUTH_INVALID_CREDENTIALS }` directly.
     return NextResponse.json(
-      { error: AUTH_INVALID_CREDENTIALS },
+      toErrorResponse(
+        new AppError(
+          AUTH_INVALID_CREDENTIALS.code,
+          AUTH_INVALID_CREDENTIALS.message,
+          { status: 401 },
+        ),
+      ),
       { status: 401 },
     );
   }
@@ -80,6 +93,18 @@ export async function middleware(
   const slug = extractSubdomain(request.headers.get("host"));
   const tenant = slug ? await bootstrap.resolveTenantBySlug(slug) : null;
   const tenantId = tenant?.id ?? UNRESOLVED_TENANT;
+
+  // Structured JSON logging (platform-foundation spec, W2): a real,
+  // production call site for `createLogger`/`logger`, demonstrating the
+  // D8-shared AsyncLocalStorage store actually attaches `tenant_id` and
+  // `request_id` to a real log line for this story's request path.
+  // Wrapped in `runWithContext` because middleware's own context does not
+  // otherwise carry over to a later Route Handler/Server Action (D2's own
+  // header comment) — this log call needs it for its own synchronous
+  // extent only.
+  runWithContext({ requestId, tenant: { tenantId, role: "anonymous" } }, () => {
+    logger.info({ slug }, tenant ? "tenant bootstrap resolved" : "tenant bootstrap unresolved");
+  });
 
   const replayRejection = await rejectCrossTenantSessionReplay(
     request,
