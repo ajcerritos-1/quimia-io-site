@@ -77,3 +77,27 @@ Chain strategy: stacked-to-main
 - [x] 7.1 Playwright e2e: sign-in happy path
 - [x] 7.2 Playwright e2e: invalid credentials -> generic message
 - [x] 7.3 Document scheduled cleanup of stale `test-*` Neon branches (AD-9 Deferred)
+
+## PR 5 Addendum — sdd-verify FAIL remediation (not a new numbered phase)
+
+All 32/32 tasks above were already complete when a fresh-context `sdd-verify` pass on
+`dev` returned **FAIL** (3 CRITICAL, 6 WARNING, 5 SUGGESTION — full report:
+`verify-report.md`). Branch `pr5-verify-fixes` closed the blocking findings plus the two
+strongly-recommended warnings:
+
+- **CRITICAL-1** — `src/app/api/auth/[...all]/route.ts` normalizes every 401 it produces
+  through `toErrorResponse`, closing the AC-4 account-state oracle on the mounted route.
+  Failure-path coverage added to `auth-route-mount.test.ts` (RED-proven against the real
+  bug, then GREEN).
+- **CRITICAL-2 / CRITICAL-3** — added real integration coverage in `auth-sign-in.test.ts`
+  proving the `(tenantId, email)` / `(tenantId, nickname)` unique constraints actually
+  reject duplicates at runtime (real Postgres `23505`, no mocks).
+- **W3** — amended `specs/tenant-isolation/spec.md` to authorize
+  `bootstrap.findSessionTenantByToken()` as a second, narrowly-scoped bootstrap flow.
+- **W1 / W2** — wired `toErrorResponse` and `logger` into `src/middleware.ts` and
+  `src/modules/auth/server/sign-in.action.ts`; verified real structured log lines
+  (`tenant_id`/`request_id`) during an actual integration run.
+
+Deferred, unchanged: W4 (Windows Neon branch-leak on teardown), W5 (Neon readiness race
+before `migrate deploy`), S1-S5. A fresh `sdd-verify` pass is expected to follow this
+batch before `sdd-archive`.
