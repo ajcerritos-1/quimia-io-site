@@ -75,9 +75,9 @@ Greenfield, single branch — `git revert` the merge or delete the branch; drop 
 
 ## Success Criteria
 
-- [ ] Valid credentials sign in; a tenant-scoped session is established
-- [ ] Subdomain resolves `tenantId` via bootstrap mode before any scoped transaction opens
-- [ ] Integration test proves a tenant-A session returns zero tenant-B rows
-- [ ] Invalid password and inactive account return the identical generic message
-- [ ] Every log line carries `tenant_id` and `request_id`; errors use the single envelope
-- [ ] No direct `prisma.<model>` call exists outside `src/shared/db`
+- [x] Valid credentials sign in; a tenant-scoped session is established
+- [x] Subdomain resolves `tenantId` via bootstrap mode before any scoped transaction opens
+- [x] Integration test proves a tenant-A session returns zero tenant-B rows
+- [x] Invalid password and inactive account return the identical generic message
+- [x] Every log line carries `tenant_id` and `request_id`; errors use the single envelope
+- [x] No direct `prisma.<model>` call exists outside `src/shared/db`
