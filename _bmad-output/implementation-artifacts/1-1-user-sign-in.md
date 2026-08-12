@@ -4,7 +4,7 @@ Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Dev execution for this story runs via SDD (openspec/changes/story-1-1-user-sign-in/), not bmad-dev-story. Task checkboxes below are kept in sync with openspec/changes/story-1-1-user-sign-in/tasks.md — that file is the source of truth for phase/subtask granularity. -->
-<!-- sdd-verify (2026-08-11) FAILED: 3 CRITICAL findings, see openspec/changes/story-1-1-user-sign-in/verify-report.md. All 32/32 SDD tasks below are implemented and honestly checked, but AC-4 is violated on the public /api/auth/[...all] route (an account-state oracle distinguishes "inactive account" from "wrong password" there, even though the UI path is compliant), plus 2 untested uniqueness scenarios. Do NOT read the checkboxes below as "story done" — archive is blocked until the CRITICAL findings are fixed and this change is re-verified. -->
+<!-- sdd-verify (2026-08-11) FAILED on the first pass: 3 CRITICAL findings (AC-4 account-state oracle on the public /api/auth/[...all] route, 2 untested uniqueness scenarios) — see openspec/changes/story-1-1-user-sign-in/verify-report.md. A fix batch (PR 5) closed all 3, plus 3 strongly-recommended WARNINGs (undisclosed bootstrap flow vs spec, vacuous error-envelope/logging requirements). A second fresh-context sdd-verify pass (2026-08-11) confirmed PASS WITH WARNINGS, 0 CRITICAL — see verify-report-2.md. Remaining WARNINGs are pre-existing, deferred, harness-only (Neon branch cleanup on Windows, no readiness poll before migrate deploy) — not story-blocking. Change is ready for sdd-archive; all 32/32 tasks below are implemented, tested, and now independently verified. -->
 
 ## Story
 
