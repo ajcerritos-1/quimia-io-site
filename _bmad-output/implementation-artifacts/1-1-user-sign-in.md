@@ -1,11 +1,12 @@
 # Story 1.1: User Sign-In
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Dev execution for this story ran via SDD, not bmad-dev-story. The SDD change is now archived at openspec/changes/archive/2026-08-11-story-1-1-user-sign-in/ (tasks.md there is the historical source of truth for phase/subtask granularity — 32/32 checked). -->
 <!-- sdd-verify (2026-08-11) found 3 top-severity issues on its first pass (AC-4 account-state oracle on the public /api/auth/[...all] route, 2 untested uniqueness scenarios). A fix batch (PR 5) closed all 3, plus 3 strongly-recommended hardening items (undisclosed bootstrap flow vs spec, vacuous error-envelope/logging requirements). A second fresh-context sdd-verify pass (2026-08-11) confirmed PASS, 0 top-severity issues remaining. The SDD change was archived the same day: openspec/changes/archive/2026-08-11-story-1-1-user-sign-in/ (proposal, design, tasks, verify-report, archive-report); its delta specs are now the project's baseline at openspec/specs/. Two harness-only items remain deferred (Neon branch cleanup on Windows, no readiness poll before migrate deploy) — neither affects shipped behavior. -->
-<!-- Story-level gap NOT covered by the archived SDD change: Task 1's last subtask (Vercel/Neon preview-deploy pipeline, AD-9) is still open — it was never in SDD's 32-task scope because it needs a real git remote + Vercel account connected, which this project doesn't have yet (`git remote -v` is empty). All 4 ACs are implemented and independently verified; this is the one open item standing between "code done" and "story done" as originally scoped. -->
+<!-- Story-level gap closed 2026-08-16: Task 1's last subtask (Vercel/Neon preview-deploy pipeline, AD-9) needed a real git remote + Vercel account, which this project didn't have yet (`git remote -v` was empty). Set up: GitHub repo `ajcerritos-1/quimia-io-site` (SSH-isolated per-repo, separate from the operator's other GitHub identity), a Vercel project wired to `main`→`quimiaio.com` (production) and `dev`→`dev.quimiaio.com` (preview, via Vercel branch domain), a persistent Neon `dev` branch (data+schema copy of `production`, non-expiring) for the preview `DATABASE_URL`/`DIRECT_DATABASE_URL`, and the native Neon–Vercel integration for future per-git-branch preview databases. Fixed two real deploy bugs found along the way: missing `postinstall: prisma generate` (custom Prisma output path wasn't gitignored-safe for a clean Vercel install) and a stray placeholder `index.html` committed at repo root that made Vercel misdetect the framework as "Other" instead of Next.js. Both `quimiaio.com` and `dev.quimiaio.com` verified live (200 on `/` and `/sign-in`). All 4 ACs implemented and independently verified, and the deployment pipeline now matches AD-9 end to end — story done. -->
+<!-- Deferred, not blocking: the Neon–Vercel integration's automatic per-git-branch ephemeral database (AD-9's "ephemeral Neon branch per PR") wasn't exercised against a real PR yet — will be exercised naturally when Story 1.2 opens its first PR branch. -->
 
 ## Story
 
@@ -22,12 +23,12 @@ so that I can access only my tenant's data through a secure, tenant-scoped sessi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Project & environment scaffolding (AC: all — this story is first in the project; no separate scaffolding story exists, see Dev Notes)
+- [x] Task 1: Project & environment scaffolding (AC: all — this story is first in the project; no separate scaffolding story exists, see Dev Notes)
   - [x] Initialize Next.js `>=16.2.11` (App Router), TypeScript 6.x strict
   - [x] Configure Tailwind CSS v4 + shadcn/ui (Base UI)
   - [x] Set up `prisma.config.ts` (Prisma 7.x requirement — no more datasource `url` in schema), `@prisma/adapter-pg`, explicit generator `output` path
   - [x] Provision Neon project + database; wire connection string (pooled, pgbouncer) via typed env config (Zod, `src/shared/config/`)
-  - [ ] Set up dev (local) → preview (Vercel + ephemeral Neon branch per PR) → production (Vercel + Neon main) pipeline per AD-9
+  - [x] Set up dev (local) → preview (Vercel + ephemeral Neon branch per PR) → production (Vercel + Neon main) pipeline per AD-9
 - [x] Task 2: Core schema — `Tenant` and `User` models (AC: 1, 3)
   - [x] Create `Tenant` model (cuid2 id, subdomain/slug for `{lab}.quimiaio.com` resolution)
   - [x] Create `User` model (cuid2 id, `tenantId` FK, email/nickname, passwordHash via Better Auth, `role` field — see Dev Notes for the enum-vs-table decision this story must make)
