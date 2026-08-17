@@ -54,14 +54,15 @@ export async function seedUser(
   client: Client,
   tenantId: string,
   password: string,
+  role: "admin" | "recepcionista" | "quimico" = "admin",
 ): Promise<SeededUser> {
   const userId = `user-e2e-${randomUUID()}`;
   const email = `e2e-${randomUUID()}@example.com`;
   const nickname = `e2euser${randomUUID().slice(0, 8)}`;
   await client.query(
     `INSERT INTO "user" (id, "tenantId", email, nickname, name, role, "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, 'admin', now())`,
-    [userId, tenantId, email, nickname, "E2E User"],
+     VALUES ($1, $2, $3, $4, $5, $6, now())`,
+    [userId, tenantId, email, nickname, "E2E User", role],
   );
   const hash = await hashPassword(password);
   await client.query(

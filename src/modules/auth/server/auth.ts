@@ -30,12 +30,21 @@ export const AUTH_INVALID_CREDENTIALS = {
   message: "Invalid credentials.",
 } as const;
 
+// NFR-2, centralized here (AD-8) rather than left to the UI form. Exported
+// so any other module that needs this same policy (e.g. Story 1.2's
+// create-user Zod schema) reads THIS value instead of hardcoding a second,
+// possibly-divergent length check.
+export const MIN_PASSWORD_LENGTH = 12;
+
 export const auth = betterAuth({
   database: prismaAdapter(authPrisma, { provider: "postgresql" }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  // NFR-2, centralized here (AD-8) rather than left to the UI form.
-  emailAndPassword: { enabled: true, minPasswordLength: 12, autoSignIn: true },
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: MIN_PASSWORD_LENGTH,
+    autoSignIn: true,
+  },
   user: {
     modelName: "user",
     additionalFields: {

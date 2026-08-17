@@ -61,6 +61,33 @@ model User {
   @@map("user")
 }
 
+// Immutable audit trail (AD-10, NFR-7, Story 1.2 Task 1). "action" is a
+// plain String, not an enum — action names keep growing across every later
+// epic (2.4, 3.3, 6.2, 6.6, 7.4, ...); an enum here would need editing per
+// module. Immutability is enforced at the Postgres GRANT level (SELECT +
+// INSERT only, no UPDATE/DELETE to quimia_app — see the hand-written
+// migration), not by application code, which could be bypassed by a bug or a
+// future dev writing raw SQL.
+model AuditLog {
+  id           String   @id @default(cuid(2))
+  tenantId     String
+  entity       String
+  entityId     String
+  action       String
+  before       Json?
+  after        Json?
+  actorUserId  String
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+  // Every "history of this record" query (including this story's own tests)
+  // filters by entityId — code-review follow-up 2026-08-16.
+  @@index([entityId])
+  // RLS + FORCE ROW LEVEL SECURITY (D5, same shape as "user"): tenant_isolation
+  // policy on current_setting('app.tenant_id'). See the hand-written migration.
+  @@map("audit_log")
+}
+
 // Better Auth core tables — RLS-EXEMPT by design (AD-2 threat-model addendum,
 // 2026-08-02). Do not add tenant_isolation policies to these three tables;
 // isolation happens one hop later, at the User/application-data layer.
