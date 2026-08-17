@@ -43,6 +43,28 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     await expect(page.getByRole("heading", { name: /usuarios/i })).toBeVisible();
     await expect(page.getByText(admin.nickname)).toBeVisible();
 
+    // Self-action guard (Story 1.3 AC 6): the signed-in admin's OWN row
+    // renders its role <select> and Desactivar control visibly disabled with
+    // a stated, visible reason — never silently inert.
+    const ownRow = page.getByRole("row", { name: new RegExp(admin.nickname) });
+    const ownRoleSelect = ownRow.getByRole("combobox");
+    await expect(ownRoleSelect).toBeDisabled();
+    const ownRoleReasonId = await ownRoleSelect.getAttribute("aria-describedby");
+    expect(ownRoleReasonId).toBeTruthy();
+    await expect(page.locator(`#${ownRoleReasonId}`)).toHaveText(
+      "No puedes cambiar tu propio rol.",
+    );
+
+    const ownDeactivateButton = ownRow.getByRole("button", { name: /desactivar/i });
+    await expect(ownDeactivateButton).toBeDisabled();
+    const ownDeactivateReasonId = await ownDeactivateButton.getAttribute(
+      "aria-describedby",
+    );
+    expect(ownDeactivateReasonId).toBeTruthy();
+    await expect(page.locator(`#${ownDeactivateReasonId}`)).toHaveText(
+      "No puedes desactivar tu propia cuenta.",
+    );
+
     // Create a new user.
     const newEmail = `nuevo-${Date.now()}@example.com`;
     const newNickname = `nuevo${Date.now()}`;

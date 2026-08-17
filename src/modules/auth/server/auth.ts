@@ -19,6 +19,9 @@ import { authPrisma, scoped } from "../../../shared/db";
 import { getContext } from "../../../shared/context/request-context";
 import type { TenantContext } from "../../../shared/db";
 import { env } from "../../../shared/config/env";
+import { MIN_PASSWORD_LENGTH } from "./password-policy";
+
+export { MIN_PASSWORD_LENGTH };
 
 /**
  * The ONE generic failure body for AC-4: unknown tenant, inactive tenant,
@@ -29,12 +32,6 @@ export const AUTH_INVALID_CREDENTIALS = {
   code: "AUTH_INVALID_CREDENTIALS",
   message: "Invalid credentials.",
 } as const;
-
-// NFR-2, centralized here (AD-8) rather than left to the UI form. Exported
-// so any other module that needs this same policy (e.g. Story 1.2's
-// create-user Zod schema) reads THIS value instead of hardcoding a second,
-// possibly-divergent length check.
-export const MIN_PASSWORD_LENGTH = 12;
 
 export const auth = betterAuth({
   database: prismaAdapter(authPrisma, { provider: "postgresql" }),

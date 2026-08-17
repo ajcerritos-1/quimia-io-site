@@ -15,7 +15,14 @@ import { requireAdmin } from "@/modules/auth/server/require-admin";
 import { CreateUserForm } from "@/modules/auth/ui/create-user-form";
 import { UsersTable, type UserRow } from "@/modules/auth/ui/users-table";
 
-async function loadUsers(): Promise<UserRow[]> {
+interface LoadUsersResult {
+  users: UserRow[];
+  /** Story 1.3 Task 5 (AC 6): the signed-in admin's own id, threaded down so
+   * `UsersTable` can render their own row's self-action controls disabled. */
+  viewerUserId: string;
+}
+
+async function loadUsers(): Promise<LoadUsersResult> {
   const requestHeaders = await headers();
   const tenantId = requestHeaders.get("x-tenant-id");
   if (!tenantId || tenantId === UNRESOLVED_TENANT) notFound();
@@ -24,8 +31,11 @@ async function loadUsers(): Promise<UserRow[]> {
   try {
     return await requireAdmin(
       { headers: requestHeaders, tenantId, requestId },
-      async (actor) =>
-        scoped({ tenantId: actor.tenantId, role: actor.role }).user.findMany({
+      async (actor) => {
+        const users = await scoped({
+          tenantId: actor.tenantId,
+          role: actor.role,
+        }).user.findMany({
           select: {
             id: true,
             name: true,
@@ -35,7 +45,9 @@ async function loadUsers(): Promise<UserRow[]> {
             isActive: true,
           },
           orderBy: { createdAt: "asc" },
-        }),
+        });
+        return { users, viewerUserId: actor.userId };
+      },
     );
   } catch (error) {
     if (error instanceof AppError && error.status === 401) redirect("/sign-in");
@@ -45,7 +57,7 @@ async function loadUsers(): Promise<UserRow[]> {
 }
 
 export default async function UsuariosPage() {
-  const users = await loadUsers();
+  const { users, viewerUserId } = await loadUsers();
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-8">
@@ -58,7 +70,7 @@ export default async function UsuariosPage() {
 
       <CreateUserForm />
 
-      <UsersTable users={users} />
+      <UsersTable users={users} viewerUserId={viewerUserId} />
     </div>
   );
 }

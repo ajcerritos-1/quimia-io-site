@@ -9,6 +9,11 @@
  * The role field derives from the generated Prisma `UserRole` enum
  * (code-review follow-up 2026-08-16) and reuses `users-table.tsx`'s
  * `ROLE_LABELS` mapping rather than a second hand-typed option list.
+ * `UserRole` is imported as a TYPE ONLY (Story 1.3 fix, same reason as
+ * `users-table.tsx`'s own Debug Log entry: a runtime import here pulls
+ * `src/shared/db`'s Prisma/`pg` module graph into the browser bundle and
+ * fails `next build`) — `z.enum` and the default option derive from
+ * `ROLE_LABELS`'s own keys instead, with zero runtime `UserRole` import.
  * The password field enforces the SAME `MIN_PASSWORD_LENGTH` Better Auth
  * and `create-user.action.ts`'s server-side Zod schema use (AD-8, no
  * divergent client-side check) — a server-side rejection of a too-short
@@ -26,10 +31,13 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { UserRole } from "@/shared/db";
-import { MIN_PASSWORD_LENGTH } from "../server/auth";
+import type { UserRole } from "@/shared/db";
+import { MIN_PASSWORD_LENGTH } from "../server/password-policy";
 import { submitCreateUser } from "../server/submit-create-user.action";
 import { ROLE_LABELS } from "./users-table";
+
+const ROLE_VALUES = Object.keys(ROLE_LABELS) as [UserRole, ...UserRole[]];
+const DEFAULT_ROLE: UserRole = "quimico";
 
 const createUserFormSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre."),
@@ -41,7 +49,7 @@ const createUserFormSchema = z.object({
       MIN_PASSWORD_LENGTH,
       `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
     ),
-  role: z.enum(UserRole),
+  role: z.enum(ROLE_VALUES),
 });
 
 interface CreateUserFormState {
@@ -186,7 +194,7 @@ export function CreateUserForm() {
             <select
               id="role"
               name="role"
-              defaultValue={UserRole.quimico}
+              defaultValue={DEFAULT_ROLE}
               aria-invalid={Boolean(state.fieldErrors.role)}
               className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
             >
