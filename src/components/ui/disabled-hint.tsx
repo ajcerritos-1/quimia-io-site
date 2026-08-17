@@ -12,6 +12,13 @@
  * rendered `<span>`, never a `title` attribute alone), linked via
  * `aria-describedby` (via `useId()`) so screen readers announce the reason
  * too. When `disabled` is false, the child renders untouched.
+ *
+ * If the wrapped child already carries its own `aria-describedby` (e.g. a
+ * form field also linked to a validation-error message), that id is MERGED
+ * with the new reason id rather than overwritten (Review Findings patch
+ * 2026-08-17) — today's two call sites never pass a child with a
+ * pre-existing `aria-describedby`, so this was previously a silent
+ * correctness gap waiting for the next reuse, not an active bug.
  */
 import { cloneElement, isValidElement, useId, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
@@ -41,8 +48,13 @@ export function DisabledHint({
 
   if (!disabled) return children;
 
+  const existingDescribedBy = isValidElement(children)
+    ? children.props["aria-describedby"]
+    : undefined;
+  const describedBy = [existingDescribedBy, reasonId].filter(Boolean).join(" ");
+
   const control = isValidElement(children)
-    ? cloneElement(children, { disabled: true, "aria-describedby": reasonId })
+    ? cloneElement(children, { disabled: true, "aria-describedby": describedBy })
     : children;
 
   return (

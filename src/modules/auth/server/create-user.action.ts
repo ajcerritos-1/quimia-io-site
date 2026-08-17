@@ -21,6 +21,7 @@
  * nickname])` constraints) and translated into a friendly 409 `AppError`
  * instead of propagating as a raw, unhandled Prisma error.
  */
+import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";

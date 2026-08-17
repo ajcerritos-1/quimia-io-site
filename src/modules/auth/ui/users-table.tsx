@@ -146,20 +146,28 @@ export function UsersTable({
                     </button>
                   </DisabledHint>
                 ) : (
-                  // No self-action guard needed here: a deactivated actor is
-                  // rejected by `getCurrentActor()`'s `isActive` re-check
-                  // before ever reaching this page (Story 1.2 Task 9 dev
-                  // note), so the viewer's own row can never render this
-                  // Reactivar button in practice — left untouched (Story
-                  // 1.3 Task 5's own documented judgment call).
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => handleReactivate(user.id)}
-                    className="rounded-lg border border-input px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  // This branch is structurally unreachable for the viewer's
+                  // own row in practice: a deactivated actor is rejected by
+                  // `getCurrentActor()`'s `isActive` re-check before ever
+                  // reaching this page (Story 1.2 Task 9 dev note). Story
+                  // 1.3 Task 5 originally left this button undecorated on
+                  // that basis; Review Findings patch 2026-08-17 wraps it in
+                  // `DisabledHint` anyway — free defense-in-depth now that
+                  // the primitive exists, in case that invariant ever stops
+                  // holding.
+                  <DisabledHint
+                    disabled={isOwnRow}
+                    reason="No puedes reactivar tu propia cuenta."
                   >
-                    Reactivar
-                  </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => handleReactivate(user.id)}
+                      className="rounded-lg border border-input px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                    >
+                      Reactivar
+                    </button>
+                  </DisabledHint>
                 )}
               </td>
             </tr>

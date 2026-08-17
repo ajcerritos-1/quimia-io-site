@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -13,6 +14,17 @@ import { defineConfig } from "vitest/config";
  * `.env.example`).
  */
 export default defineConfig({
+  resolve: {
+    // See `vitest.config.ts` for why `server-only` (Review Findings patch
+    // 2026-08-17) needs this alias under Vitest — every integration test
+    // here imports real server modules (`require-admin.ts`, `auth.ts`, ...)
+    // directly, which now transitively import `server-only`.
+    alias: {
+      "server-only": fileURLToPath(
+        new URL("./node_modules/server-only/empty.js", import.meta.url),
+      ),
+    },
+  },
   test: {
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],

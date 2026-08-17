@@ -12,8 +12,11 @@
  * `UserRole` is imported as a TYPE ONLY (Story 1.3 fix, same reason as
  * `users-table.tsx`'s own Debug Log entry: a runtime import here pulls
  * `src/shared/db`'s Prisma/`pg` module graph into the browser bundle and
- * fails `next build`) — `z.enum` and the default option derive from
- * `ROLE_LABELS`'s own keys instead, with zero runtime `UserRole` import.
+ * fails `next build`) — `z.enum` derives from `roles.ts`'s canonical,
+ * client-safe `ALL_ROLES` tuple (Review Findings patch 2026-08-17, not from
+ * `Object.keys(ROLE_LABELS)`, so the UI-labels object is never the
+ * accidental source of truth for which roles are valid), with zero runtime
+ * `UserRole` import.
  * The password field enforces the SAME `MIN_PASSWORD_LENGTH` Better Auth
  * and `create-user.action.ts`'s server-side Zod schema use (AD-8, no
  * divergent client-side check) — a server-side rejection of a too-short
@@ -32,11 +35,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { UserRole } from "@/shared/db";
+import { ALL_ROLES } from "@/modules/auth/roles";
 import { MIN_PASSWORD_LENGTH } from "../server/password-policy";
 import { submitCreateUser } from "../server/submit-create-user.action";
 import { ROLE_LABELS } from "./users-table";
 
-const ROLE_VALUES = Object.keys(ROLE_LABELS) as [UserRole, ...UserRole[]];
 const DEFAULT_ROLE: UserRole = "quimico";
 
 const createUserFormSchema = z.object({
@@ -49,7 +52,7 @@ const createUserFormSchema = z.object({
       MIN_PASSWORD_LENGTH,
       `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
     ),
-  role: z.enum(ROLE_VALUES),
+  role: z.enum(ALL_ROLES),
 });
 
 interface CreateUserFormState {

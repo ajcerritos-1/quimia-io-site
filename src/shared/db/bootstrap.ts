@@ -8,6 +8,7 @@
  * caller needs), and justified individually below — this is not a general
  * unscoped-query escape hatch.
  */
+import "server-only";
 import { base } from "./client";
 
 export const bootstrap = {

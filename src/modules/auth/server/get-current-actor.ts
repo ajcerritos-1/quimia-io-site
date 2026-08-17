@@ -30,6 +30,7 @@
  * for sign-in (AC-4's "no hint" posture) — never a field- or reason-specific
  * message.
  */
+import "server-only";
 import { runWithContext } from "../../../shared/context/request-context";
 import { scoped, type UserRole } from "../../../shared/db";
 import { AppError } from "../../../shared/http/errors";

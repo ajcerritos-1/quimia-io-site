@@ -19,6 +19,7 @@
  * and return the existing state — avoids a misleading before==after
  * `AuditLog` transition that never actually happened.
  */
+import "server-only";
 import { z } from "zod";
 import { transaction, writeAuditLog, UserRole } from "../../../shared/db";
 import { AppError } from "../../../shared/http/errors";

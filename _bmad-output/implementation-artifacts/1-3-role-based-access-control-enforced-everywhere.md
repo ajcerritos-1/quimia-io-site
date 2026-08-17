@@ -1,6 +1,6 @@
 # Story 1.3: Role-Based Access Control Enforced Everywhere
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Generated 2026-08-17 via bmad-create-story. This is the generalization Story 1.2's `require-admin.ts` explicitly anticipated: "Story 1.3 will very likely generalize/refactor this into a reusable `requireRole()` used by every module." No other feature modules exist yet besides `auth` (Story 1.1/1.2) — this story's job is to build and prove the general-purpose mechanism, not to gate a brand-new feature. Dev execution likely runs via the project's SDD process (see 1-1's precedent), or via bmad-dev-story — either is fine, this file is self-contained either way. -->
@@ -54,6 +54,7 @@ so that I can never see or do something outside my role, whether through the UI 
   - [x] `page.tsx`'s `loadUsers()` already resolves `actor` inside its `requireAdmin` callback (see current code: `async (actor) => scoped(...).user.findMany(...)`). Capture `actor.userId` and return it alongside the list, e.g. `{ users, viewerUserId: actor.userId }`; pass `viewerUserId` as a new prop into `<UsersTable users={...} viewerUserId={...} />`.
   - [x] `users-table.tsx`: add a `viewerUserId: string` prop. For the row where `user.id === viewerUserId`, wrap the role `<select>` and the Desactivar button in Task 4's primitive: disabled, reason "No puedes cambiar tu propio rol." for the select, "No puedes desactivar tu propia cuenta." for Desactivar (Spanish UI copy, matching this screen's existing convention, UX-DR22/NFR-9). The Reactivar button can never actually appear on the viewer's own row in practice (a deactivated actor is rejected by `getCurrentActor()`'s `isActive` re-check before ever reaching this page, per Story 1.2's Task 9 dev note) — your call whether to also defensively disable it for row-level consistency or leave it untouched; document whichever you pick in this story's Completion Notes. **Decision: left untouched — see Completion Notes.**
   - [x] Do NOT change the page-level admission rule — `requireAdmin()` still gates the whole page, a non-admin still gets `notFound()`. This task is strictly additive: it only changes what an ADMIN sees on their OWN row. It does not expose the roster or any action to a new role.
+  - [x] **Review Findings patch 2026-08-17:** this task's original scope note (below, and the Source Tree Placement table's "existing — untouched"/"UNCHANGED" annotations) said Story 1.1/1.2 files stay untouched — the Debug Log records that the orchestrator authorized and applied exactly one exception to this, modifying Story 1.2's `create-user-form.tsx` (and `auth.ts`) to fix a blocking pre-existing `next build` defect that was blocking ALL e2e verification. See Dev Agent Record → Debug Log References → "Orchestrator resolution (2026-08-17), post-HALT" for the full rationale.
 
 - [x] Task 6: e2e coverage for the self-action disabled state (AC: 6) — `tests/e2e/usuarios.spec.ts` — **verified green 2026-08-17 after the orchestrator authorized and applied the blocking fix (see Debug Log).**
   - [x] Extend the existing "an admin can list, create, edit the role of, and deactivate a user" test (or add a new test in the same file): after signing in as the seeded admin, locate that admin's OWN row and assert its role `<select>` is disabled (`toBeDisabled()`) and the reason text ("No puedes cambiar tu propio rol.") is visible in the DOM near the control; same for the Desactivar button and its reason.
@@ -61,6 +62,25 @@ so that I can never see or do something outside my role, whether through the UI 
 
 - [x] Task 7: Full regression pass (AC: 4) — **all green 2026-08-17: unit 33/33, integration 78/78 (19 files), e2e 5/5, lint clean, tsc clean, `next build` clean.**
   - [x] Run `npm run test`, `npm run test:integration`, `npm run test:e2e`, `npm run lint`, `tsc --noEmit`. Zero edits were needed to `create-user.action.ts`, `update-user-role.action.ts`, `deactivate-user.action.ts`, `reactivate-user.action.ts`, or any of Story 1.2's existing test files — confirmed unmodified in the final diff. Strict TDD followed for Tasks 3 and 6's new tests.
+
+### Review Findings
+
+- [x] [Review][Decision→Patch] Add the `server-only` npm package — resolved 2026-08-17: approved. Add it to `src/shared/db/*` and `auth.ts`/`password-policy.ts`'s server-only siblings so a client component importing them fails fast at build time with a clear error, instead of the cryptic Turbopack `pg`/`tls` resolution error this story hit twice.
+- [x] [Review][Patch] `ROLE_LABELS`/`create-user-form.tsx`'s role validation both derive from a UI-labels object instead of a canonical role-values list — export the values list from `roles.ts` itself (zero-import, client-safe) and have both consumers derive from it. [src/modules/auth/roles.ts, src/modules/auth/ui/users-table.tsx, create-user-form.tsx] — **Done 2026-08-17:** `roles.ts` now exports `ALL_ROLES: [UserRole, ...UserRole[]]` (plain string literals, `import type` only, zero runtime dependency). `create-user-form.tsx` imports `ALL_ROLES` directly and derives `z.enum(ALL_ROLES)` from it instead of `Object.keys(ROLE_LABELS)` — no unchecked cast. `users-table.tsx`'s `ROLE_LABELS` shape is unchanged (`Record<UserRole, string>` already forces exhaustiveness).
+- [x] [Review][Patch] `DisabledHint` overwrites any pre-existing `aria-describedby` on the wrapped control instead of merging — fine for today's two call sites, a real bug for future reuse. [src/components/ui/disabled-hint.tsx] — **Done 2026-08-17:** the child's existing `aria-describedby` (if any) is now merged with the new reason id (`[existingDescribedBy, reasonId].filter(Boolean).join(" ")`) instead of overwritten; doc comment explains why. No new e2e assertion added for the merge itself — today's two call sites never pass a child with a pre-existing `aria-describedby`, so there's no real-code path to exercise; the existing e2e already asserts the resulting `aria-describedby` is non-empty and resolves to the correct visible reason text.
+- [x] [Review][Patch] No regression test pins `ADMIN_ACTION_DENIED`'s `{code, message}` shape against the pre-refactor hardcoded values — the backward-compat claim is only a comment. [src/modules/auth/server/require-admin.ts] — **Done 2026-08-17:** added a pinning test in `tests/integration/auth-require-admin.test.ts` (`expect(ADMIN_ACTION_DENIED).toEqual({ code: "FORBIDDEN", message: "You do not have permission to perform this action." })`), written failing-first (temporarily asserted a wrong `code` value, confirmed RED for the right reason, then corrected to GREEN) per this project's strict-TDD mode.
+- [x] [Review][Patch] e2e builds an unescaped `RegExp` from a dynamically generated nickname — fine today, a footgun the moment nickname generation includes a regex metacharacter. [tests/e2e/usuarios.spec.ts] — **Done 2026-08-17:** added a local `escapeRegExp()` helper and applied it to both dynamic-nickname `new RegExp(...)` call sites (the admin's own row and the newly created user's row).
+- [x] [Review][Patch] Task 5's own checklist text still says "Do NOT modify Story 1.1 or 1.2's files," which the orchestrator's documented, authorized fix then did — update the instruction text so the checklist doesn't mislead a future reader. [this file, Task 5] — **Done 2026-08-17:** added a note under Task 5 pointing to the Debug Log's "Orchestrator resolution (2026-08-17), post-HALT" entry, and updated the Source Tree Placement annotation for `create-user-form.tsx` to reflect it was modified, not left untouched.
+- [x] [Review][Patch] Reactivar button on the viewer's own row has no defensive `DisabledHint` wrap (documented as deliberate since the state is "impossible" today) — now that the primitive exists and the wrap is ~3 lines, add it as free defense-in-depth rather than relying on an invariant holding forever. [src/modules/auth/ui/users-table.tsx] — **Done 2026-08-17:** Reactivar is now wrapped in `DisabledHint` (`disabled={isOwnRow}`, reason "No puedes reactivar tu propia cuenta.") on every row, matching the role-`<select>`/Desactivar pattern. **Not extended in e2e**: this state remains structurally unreachable through a real browser session — the signed-in admin's own row always has `isActive: true` (a deactivated actor never reaches this page at all, per `getCurrentActor()`'s re-check), so the ternary never takes the Reactivar branch for `isOwnRow`. Asserting it would require contriving a state the app's own security invariant forbids reaching.
+- [x] [Review][Defer] Self-action-disabled styling is inconsistent with this same file's existing silent disables (`isPending`, `!user.isActive`) — a fair consistency critique, not a bug; those are different semantic cases (temporary/loading vs. "not allowed"). Deferred, style-only.
+- [x] [Review][Defer] `DisabledHint` causes a layout shift between enabled/disabled states and silently drops `className` when `disabled=false` — minor UI polish. Deferred.
+- [x] [Review][Defer] Zero unit tests for `DisabledHint` — project has no React component-test framework installed (confirmed in this story's own Dev Notes); adding one is a separate dependency decision, not this story's call. Covered indirectly today via e2e. Deferred.
+- [x] [Review][Defer] `RequireRoleOptions.entity`/`action` are unconstrained strings with no cross-module collision protection — real concern, premature: only one module (`auth`) uses `requireRole` today. Revisit when a second module adopts it. Deferred.
+- [x] [Review][Defer] `auth-require-role.test.ts`'s multi-role coverage is narrow (one fixed 2-role shape, no 3+ roles, no explicit `entityId` case) — AC 7 is satisfied per the Acceptance Auditor; more cases are a nice-to-have. Deferred.
+- [x] [Review][Defer] `ownRow.getByRole("combobox")` e2e locator assumes exactly one combobox per row forever — speculative future concern, no second combobox exists today. Deferred.
+- [x] [Review][Dismiss] `ROLE_VALUES as [UserRole, ...UserRole[]]` cast is "unchecked" — technically true, but `Record<UserRole, string>` already forces `ROLE_LABELS` to cover every enum value at compile time, so the cast can't actually go wrong today; also moot once the canonical-list patch above lands.
+- [x] [Review][Dismiss] "Self-action guard's server-side enforcement is unverified by this diff" — verified false: `tests/integration/auth-deactivate-user.test.ts` ("AC 5: an admin can never deactivate their own account...") and `auth-update-user-role.test.ts` (`SELF_ROLE_CHANGE_FORBIDDEN`) already cover this from Story 1.2; this story correctly didn't duplicate unchanged coverage.
+- [x] [Review][Dismiss] "Bundling unrelated concerns (RBAC mechanism + build fix) into one commit" — a process nitpick about commit hygiene, not a code defect; the commit is already pushed, not worth rewriting history for.
 
 ## Dev Notes
 
@@ -130,7 +150,7 @@ src/
         reactivate-user.action.ts  # existing — UNCHANGED
       ui/
         users-table.tsx            # MODIFIED (Task 5) — viewerUserId prop, self-row disabled state
-        create-user-form.tsx       # existing — untouched
+        create-user-form.tsx       # existing — modified (orchestrator fix, post-HALT; see Debug Log — NOT untouched as originally planned)
   components/
     ui/
       disabled-hint.tsx            # NEW (Task 4) — generic, role-agnostic disabled+reason primitive
@@ -186,10 +206,19 @@ Claude Sonnet 5 (claude-sonnet-5)
 
 - Tasks 1-5 complete, TDD-verified (failing test confirmed before each implementation, passing after): `isRoleAllowed()` (unit, 4/4 new tests), `requireRole()` + `requireAdmin()` refactor (integration, 3 new + all 11 pre-existing Story 1.2 `requireAdmin`/RBAC-denial tests re-run unmodified and green), `DisabledHint` primitive, and the `/usuarios` self-action retrofit.
 - Task 2: `require-admin.ts` is now a genuinely thin wrapper (`return requireRole(request, [UserRole.admin], fn, { entity: "User", action: "USER_ADMIN_ACTION_DENIED", ... })`); `ADMIN_ACTION_DENIED` is kept as an exported alias of `require-role.ts`'s new `ROLE_ACTION_DENIED` constant (same `{ code, message }` value) for backward compatibility, since nothing in Story 1.2 imports it by identity, only by shape (`{ status: 403 }` on the thrown `AppError`).
-- Task 5: chose to leave the Reactivar button undecorated on the viewer's own row (rather than defensively wrapping it in `DisabledHint` too) — it is structurally unreachable in practice (a deactivated actor never reaches this page, per `getCurrentActor()`'s `isActive` re-check), and wrapping an unreachable branch in speculative UI risked implying a real product rule that doesn't exist yet.
+- Task 5: originally chose to leave the Reactivar button undecorated on the viewer's own row (rather than defensively wrapping it in `DisabledHint` too) — it is structurally unreachable in practice (a deactivated actor never reaches this page, per `getCurrentActor()`'s `isActive` re-check), and wrapping an unreachable branch in speculative UI risked implying a real product rule that doesn't exist yet. **Superseded 2026-08-17 by the Review Findings patch batch below** — the wrap was added anyway as free defense-in-depth now that the primitive exists.
 - Task 6: the e2e assertions are written (extending the existing "an admin can list, create, edit the role of, and deactivate a user" test) and byte-match the copy/behavior Task 5 implements, but could not be run to a passing state — see the HALT in Debug Log References. They are NOT confirmed green.
 - Task 7: `npm run test` (33/33), `npm run test:integration` (78/78 across 19 files), `npm run lint` (clean), `npx tsc --noEmit` (clean) all pass. `npm run test:e2e` did not complete — blocked at the `next build` step by the pre-existing defect described above, unrelated to and not caused by this story's implementation.
 - **Orchestrator resolution (2026-08-17), post-HALT:** authorized fixing `create-user-form.tsx` as part of this story rather than a separate chore, since it blocked ALL e2e verification (old and new). The actual fix went one layer deeper than the dev agent's own diagnosis: `create-user-form.tsx`'s `UserRole` runtime import was ALREADY switched to a `ROLE_LABELS`-derived `z.enum` + `import type`, but `next build` then surfaced the SAME class of error via a second import in the same file — `import { MIN_PASSWORD_LENGTH } from "../server/auth"`. `auth.ts` calls `betterAuth(...)` at module scope and imports `authPrisma`/`scoped` from `src/shared/db`, so importing ANY name from it — even an unrelated constant — pulls Better Auth's full server-only config (and its Prisma/`pg` adapter) into the client bundle. Fix: extracted `MIN_PASSWORD_LENGTH` into a new zero-import file, `src/modules/auth/server/password-policy.ts`; `auth.ts` now imports and re-exports it (server-only consumers like `create-user.action.ts` are unaffected); `create-user-form.tsx` imports the constant from `password-policy.ts` directly instead of `auth.ts`. Verified via `npx next build` (clean), then the full suite: unit 33/33, integration 78/78, e2e 5/5, lint clean, tsc clean.
+- **Review Findings patch batch (2026-08-17)** — all 7 `[Review][Patch]`/`[Review][Decision→Patch]` items applied:
+  1. Added the `server-only` npm package (exact package `server-only`, published by Vercel/Next.js) as a new production dependency. Added `import "server-only";` as the first import to every genuinely server-only file that must never reach a client bundle: the whole `src/shared/db` barrel and its members (`client.ts`, `scoped.ts`, `bootstrap.ts`, `ambient.ts`, `audit.ts`, `errors.ts`, `index.ts`), `auth.ts`, `get-current-actor.ts`, `require-role.ts`, `require-admin.ts`, the four action files, and `usuarios/page.tsx`. Deliberately NOT added to `password-policy.ts`, `roles.ts`, any `submit-*.action.ts`, or any `"use client"` component — those must stay client-importable. `npx next build` stayed clean after the change (no new client-bundle break was surfaced). **Gotcha found and fixed**: the `server-only` package throws unconditionally unless the bundler resolves its `react-server` export condition (only Next.js's own build does this) — under Vitest, every integration/unit test that imports a now-server-only-marked module transitively crashed with "This module cannot be imported from a Client Component module." Fixed by aliasing `server-only` → its own `node_modules/server-only/empty.js` (the same no-op Next.js itself resolves to) via `resolve.alias` in both `vitest.config.ts` and `vitest.integration.config.ts` — the package's own documented test-runner workaround, not a bypass of the guard (the guard's job is blocking CLIENT bundles, not Node test runs).
+  2. `roles.ts` now exports a canonical `ALL_ROLES: [UserRole, ...UserRole[]]` (plain string literals, `import type` only). `create-user-form.tsx` derives `z.enum(ALL_ROLES)` from it instead of `Object.keys(ROLE_LABELS)` — no unchecked cast.
+  3. `DisabledHint` now merges any pre-existing `aria-describedby` on the wrapped child with the new reason id instead of overwriting it.
+  4. Added a strict-TDD-verified regression test pinning `ADMIN_ACTION_DENIED` to `{ code: "FORBIDDEN", message: "You do not have permission to perform this action." }` in `tests/integration/auth-require-admin.test.ts`.
+  5. `tests/e2e/usuarios.spec.ts` now escapes regex metacharacters (`escapeRegExp()`) before building a `RegExp` from a dynamically generated nickname, at both call sites.
+  6. Updated Task 5's stale "do not touch Story 1.1/1.2 files" scope note and the Source Tree Placement annotation for `create-user-form.tsx` to point at the Debug Log's documented exception.
+  7. `users-table.tsx`'s Reactivar button is now wrapped in `DisabledHint` (`disabled={isOwnRow}`) on every row, matching the role-`<select>`/Desactivar pattern — not extended into e2e since the state remains unreachable through a real session (see Review Findings entry for the full reasoning).
+  Full suite re-verified after the patch batch: unit, integration, e2e, lint, `tsc --noEmit`, and `next build` — see Task 7/this story's final verification note for exact counts.
 
 ### File List
 
@@ -210,3 +239,31 @@ Claude Sonnet 5 (claude-sonnet-5)
 
 **New files (orchestrator fix):**
 - `src/modules/auth/server/password-policy.ts` (`MIN_PASSWORD_LENGTH`, zero other imports — see Debug Log)
+
+**Modified files (Review Findings patch batch, 2026-08-17):**
+- `package.json` (new dependency: `server-only`)
+- `src/shared/db/client.ts` (`import "server-only"`)
+- `src/shared/db/scoped.ts` (`import "server-only"`)
+- `src/shared/db/bootstrap.ts` (`import "server-only"`)
+- `src/shared/db/ambient.ts` (`import "server-only"`)
+- `src/shared/db/audit.ts` (`import "server-only"`)
+- `src/shared/db/errors.ts` (`import "server-only"`)
+- `src/shared/db/index.ts` (`import "server-only"`)
+- `src/modules/auth/server/auth.ts` (`import "server-only"`)
+- `src/modules/auth/server/get-current-actor.ts` (`import "server-only"`)
+- `src/modules/auth/server/require-role.ts` (`import "server-only"`)
+- `src/modules/auth/server/require-admin.ts` (`import "server-only"`)
+- `src/modules/auth/server/create-user.action.ts` (`import "server-only"`)
+- `src/modules/auth/server/update-user-role.action.ts` (`import "server-only"`)
+- `src/modules/auth/server/deactivate-user.action.ts` (`import "server-only"`)
+- `src/modules/auth/server/reactivate-user.action.ts` (`import "server-only"`)
+- `src/app/usuarios/page.tsx` (`import "server-only"`, defense-in-depth)
+- `vitest.config.ts` (aliased `server-only` → its own `empty.js` so unit tests can import server-only-marked modules)
+- `vitest.integration.config.ts` (same `server-only` alias, for integration tests)
+- `src/modules/auth/roles.ts` (added canonical `ALL_ROLES` export)
+- `src/modules/auth/ui/create-user-form.tsx` (derives `z.enum` from `ALL_ROLES` instead of `Object.keys(ROLE_LABELS)`)
+- `src/components/ui/disabled-hint.tsx` (merges pre-existing `aria-describedby` instead of overwriting it)
+- `tests/integration/auth-require-admin.test.ts` (added `ADMIN_ACTION_DENIED` regression-pin test)
+- `tests/e2e/usuarios.spec.ts` (added `escapeRegExp()` helper, applied at both dynamic-nickname `RegExp` call sites; added Reactivar `DisabledHint` note — see Review Findings for why no new assertion was added there)
+- `src/modules/auth/ui/users-table.tsx` (wrapped the Reactivar button in `DisabledHint` for the viewer's own row)
+- `_bmad-output/implementation-artifacts/1-3-role-based-access-control-enforced-everywhere.md` (this file — checked off Review Findings patches, updated Task 5 scope note, Source Tree Placement, Completion Notes, File List)

@@ -5,6 +5,7 @@
  * redirected to sign in; a non-admin gets a 404 (do not reveal the route
  * exists to a caller who isn't allowed to use it).
  */
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";

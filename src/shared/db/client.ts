@@ -9,6 +9,7 @@
  * is validated — and `.env` is loaded, transitively, by whichever entrypoint
  * imported `env` first — before the adapter ever opens a connection.
  */
+import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "../config/env";
 import { PrismaClient } from "../../generated/prisma/client";

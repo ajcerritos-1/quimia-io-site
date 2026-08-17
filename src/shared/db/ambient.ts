@@ -10,6 +10,7 @@
  * Throws if accessed outside `runWithContext` — there is no context-free
  * fallback (AD-3 forbids a third, unscoped mode here).
  */
+import "server-only";
 import { getContext } from "../context/request-context";
 import { scoped, type ScopedClient } from "./scoped";
 import type { TenantContext } from "./types";

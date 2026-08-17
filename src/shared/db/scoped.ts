@@ -16,6 +16,7 @@
  * to share one context (e.g. Phase 6's nickname->email resolve). Both are
  * the SAME contract over the SAME `set_config` mechanism — not a third mode.
  */
+import "server-only";
 import type { Prisma } from "../../generated/prisma/client";
 import { base } from "./client";
 import type { TenantContext } from "./types";

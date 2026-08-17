@@ -20,6 +20,7 @@
  * Zod-validated input — becomes the row's `entityId` instead of always
  * falling back to the denied actor's own id.
  */
+import "server-only";
 import { UserRole } from "../../../shared/db";
 import type { Actor, CurrentActorRequest } from "./get-current-actor";
 import { requireRole, ROLE_ACTION_DENIED } from "./require-role";

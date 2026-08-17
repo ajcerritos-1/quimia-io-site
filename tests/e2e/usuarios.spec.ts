@@ -11,6 +11,17 @@ import { seedTenant, seedUser, withOwnerClient } from "./seed";
 const PASSWORD = "Correct-Horse-Battery-Staple-1!";
 const PORT = process.env.E2E_PORT ?? "3100";
 
+/**
+ * Escapes regex metacharacters (Review Findings patch 2026-08-17) before a
+ * dynamically generated value (a nickname) is interpolated into a
+ * `new RegExp(...)` locator — today's nickname generators never emit a
+ * metacharacter, but building an unescaped RegExp from arbitrary dynamic
+ * text is a footgun the moment that stops being true.
+ */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function tenantUrl(slug: string, pathName = "/sign-in"): string {
   return `http://${slug}.localhost:${PORT}${pathName}`;
 }
@@ -46,7 +57,9 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     // Self-action guard (Story 1.3 AC 6): the signed-in admin's OWN row
     // renders its role <select> and Desactivar control visibly disabled with
     // a stated, visible reason — never silently inert.
-    const ownRow = page.getByRole("row", { name: new RegExp(admin.nickname) });
+    const ownRow = page.getByRole("row", {
+      name: new RegExp(escapeRegExp(admin.nickname)),
+    });
     const ownRoleSelect = ownRow.getByRole("combobox");
     await expect(ownRoleSelect).toBeDisabled();
     const ownRoleReasonId = await ownRoleSelect.getAttribute("aria-describedby");
@@ -78,7 +91,9 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     await expect(page.getByText(newNickname)).toBeVisible();
 
     // Edit the new user's role.
-    const row = page.getByRole("row", { name: new RegExp(newNickname) });
+    const row = page.getByRole("row", {
+      name: new RegExp(escapeRegExp(newNickname)),
+    });
     await row.getByRole("combobox").selectOption("recepcionista");
     await expect(row.getByRole("combobox")).toHaveValue("recepcionista");
 

@@ -4,6 +4,8 @@
  * re-exported here — every consumer goes through one of the two named modes
  * below, never a raw client.
  */
+import "server-only";
+
 export type { TenantContext } from "./types";
 // Re-exports BOTH the runtime const object and the type (same name, same
 // generated source) — callers that need to derive a Zod enum/label mapping

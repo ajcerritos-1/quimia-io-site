@@ -4,6 +4,7 @@
  * (AD-3) — a caller needing to distinguish "duplicate row" from any other
  * database failure calls this instead of importing `Prisma` itself.
  */
+import "server-only";
 import { Prisma } from "../../generated/prisma/client";
 
 export function isUniqueConstraintViolation(error: unknown): boolean {

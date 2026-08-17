@@ -15,6 +15,7 @@
  * `require-admin.ts` is now a thin wrapper over this function — see that
  * file for the exact backward-compatible call it makes.
  */
+import "server-only";
 import { transaction, writeAuditLog, type UserRole } from "../../../shared/db";
 import { AppError } from "../../../shared/http/errors";
 import { isRoleAllowed } from "../roles";

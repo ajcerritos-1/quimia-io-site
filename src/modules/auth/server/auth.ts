@@ -11,6 +11,7 @@
  * would already have minted a session; rejecting inside creation means the
  * session row for an inactive user is never persisted at all.
  */
+import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth";

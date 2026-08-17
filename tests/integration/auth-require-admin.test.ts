@@ -70,6 +70,17 @@ afterAll(async () => {
 });
 
 describe("requireAdmin (Task 3 — admin-only guard, AC-4)", () => {
+  it("pins ADMIN_ACTION_DENIED to its exact pre-refactor {code, message} shape (Review Findings patch 2026-08-17)", async () => {
+    const { ADMIN_ACTION_DENIED } = await import(
+      "../../src/modules/auth/server/require-admin"
+    );
+
+    expect(ADMIN_ACTION_DENIED).toEqual({
+      code: "FORBIDDEN",
+      message: "You do not have permission to perform this action.",
+    });
+  });
+
   it("allows an admin actor through to fn", async () => {
     const admin = await seedUser("admin");
     const requestHeaders = await signInAndBuildHeaders(admin);

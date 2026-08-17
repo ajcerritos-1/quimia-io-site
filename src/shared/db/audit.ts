@@ -6,6 +6,7 @@
  * same Postgres transaction as the mutation it is recording (AD-4: "one
  * wrapper call", not two separate operations that could diverge).
  */
+import "server-only";
 import { Prisma } from "../../generated/prisma/client";
 
 export interface AuditLogEntry {
