@@ -50,6 +50,15 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Story 1.4 Task 3/4 (AC 2, NOM-024-SSA3 account lockout). Plain columns on
+  // an already-RLS'd, already-granted table (rls_roles migration) — no new
+  // policy/grant needed, see that migration's own comment. Reset to 0/null on
+  // a successful sign-in; incremented on a failed one; `lockedUntil` set once
+  // `failedLoginAttempts` reaches `MAX_FAILED_LOGIN_ATTEMPTS`
+  // (`account-lockout.ts`).
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
   sessions Session[]
   accounts Account[]
 

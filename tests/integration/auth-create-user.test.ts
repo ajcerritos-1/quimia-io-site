@@ -153,6 +153,51 @@ describe("createUser (Task 4, AC 1/3/4)", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
   });
 
+  it("rejects a 12+ character password that fails the character-class rule (Story 1.4 Task 2, AC 1)", async () => {
+    const admin = await seedAdmin();
+    const requestHeaders = await signInAndBuildHeaders(admin.email);
+
+    const { createUser } = await import(
+      "../../src/modules/auth/server/create-user.action"
+    );
+
+    await expect(
+      createUser(
+        {
+          email: `complexity-${randomUUID()}@example.com`,
+          nickname: `complexity${randomUUID().slice(0, 8)}`,
+          name: "Weak Complexity",
+          // 12+ chars, all lowercase — only 1 of 4 character classes.
+          password: "alllowercasepw",
+          role: "quimico",
+        },
+        { headers: requestHeaders, tenantId, requestId: `req-${randomUUID()}` },
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
+  });
+
+  it("accepts a password meeting both length and complexity (Story 1.4 Task 2, AC 1)", async () => {
+    const admin = await seedAdmin();
+    const requestHeaders = await signInAndBuildHeaders(admin.email);
+
+    const { createUser } = await import(
+      "../../src/modules/auth/server/create-user.action"
+    );
+
+    const result = await createUser(
+      {
+        email: `complexity-ok-${randomUUID()}@example.com`,
+        nickname: `complexityok${randomUUID().slice(0, 8)}`,
+        name: "Strong Complexity",
+        password: NEW_USER_PASSWORD,
+        role: "quimico",
+      },
+      { headers: requestHeaders, tenantId, requestId: `req-${randomUUID()}` },
+    );
+
+    expect(result.userId).toBeTruthy();
+  });
+
   it("rejects a duplicate email with a friendly 409 instead of a raw Prisma crash (code-review follow-up)", async () => {
     const admin = await seedAdmin();
     const requestHeaders = await signInAndBuildHeaders(admin.email);

@@ -17,9 +17,10 @@
  * `Object.keys(ROLE_LABELS)`, so the UI-labels object is never the
  * accidental source of truth for which roles are valid), with zero runtime
  * `UserRole` import.
- * The password field enforces the SAME `MIN_PASSWORD_LENGTH` Better Auth
- * and `create-user.action.ts`'s server-side Zod schema use (AD-8, no
- * divergent client-side check) — a server-side rejection of a too-short
+ * The password field enforces the SAME shared `passwordPolicySchema`
+ * (`password-policy.ts`, Story 1.4 Task 1/2) Better Auth and
+ * `create-user.action.ts`'s server-side Zod schema use (AD-8, no divergent
+ * client-side check) — a server-side rejection of a policy-violating
  * password now maps back to this field's own error display via
  * `submitCreateUser`'s `fieldErrors`, not just a generic top-level banner.
  */
@@ -36,7 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import type { UserRole } from "@/shared/db";
 import { ALL_ROLES } from "@/modules/auth/roles";
-import { MIN_PASSWORD_LENGTH } from "../server/password-policy";
+import { passwordPolicySchema } from "../server/password-policy";
 import { submitCreateUser } from "../server/submit-create-user.action";
 import { ROLE_LABELS } from "./users-table";
 
@@ -46,12 +47,7 @@ const createUserFormSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre."),
   nickname: z.string().min(1, "Ingresa un nickname."),
   email: z.email("Ingresa un email válido."),
-  password: z
-    .string()
-    .min(
-      MIN_PASSWORD_LENGTH,
-      `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
-    ),
+  password: passwordPolicySchema,
   role: z.enum(ALL_ROLES),
 });
 

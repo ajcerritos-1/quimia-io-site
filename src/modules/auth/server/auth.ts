@@ -40,6 +40,14 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
+    // Better Auth's own length gate. This only guards a Better Auth-native
+    // sign-up/reset path, which does not exist yet in this app — user
+    // creation goes through `create-user.action.ts`'s own hand-built
+    // `Account` row, never `auth.api.signUpEmail` (Story 1.4 Dev Notes).
+    // Forward-looking protection, not the active enforcement point today;
+    // the active one is the shared `passwordPolicySchema`
+    // (`password-policy.ts`), which also covers the character-class rule
+    // Better Auth has no built-in hook for.
     minPasswordLength: MIN_PASSWORD_LENGTH,
     autoSignIn: true,
   },

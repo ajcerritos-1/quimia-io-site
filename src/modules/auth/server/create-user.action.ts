@@ -11,9 +11,11 @@
  * Notes) — that plugin's free-string `role` and `banned` fields conflict
  * with this project's fixed `UserRole` enum and `User.isActive` design.
  *
- * Password policy enforced here is the SAME `MIN_PASSWORD_LENGTH` Better
- * Auth itself is configured with (`auth.ts`) — no second, possibly-divergent
- * length check (AD-8).
+ * Password policy enforced here is the SAME shared `passwordPolicySchema`
+ * (`password-policy.ts`, Story 1.4 Task 1) Better Auth's own
+ * `minPasswordLength` (`auth.ts`) and `create-user-form.tsx`'s client-side
+ * check also derive from — no second, possibly-divergent length/complexity
+ * check (AD-8).
  *
  * A duplicate email/nickname (code-review follow-up 2026-08-16) is caught
  * as Postgres's own unique-constraint violation (Prisma error code P2002,
@@ -32,7 +34,7 @@ import {
   isUniqueConstraintViolation,
 } from "../../../shared/db";
 import { AppError } from "../../../shared/http/errors";
-import { MIN_PASSWORD_LENGTH } from "./auth";
+import { passwordPolicySchema } from "./password-policy";
 import type { CurrentActorRequest } from "./get-current-actor";
 import { requireAdmin } from "./require-admin";
 
@@ -40,7 +42,9 @@ export const createUserSchema = z.object({
   email: z.email(),
   nickname: z.string().min(1),
   name: z.string().min(1),
-  password: z.string().min(MIN_PASSWORD_LENGTH),
+  // Shared with `create-user-form.tsx` (Story 1.4 Task 1/2, AD-8) — no
+  // divergent length/complexity check.
+  password: passwordPolicySchema,
   role: z.enum(UserRole),
 });
 
