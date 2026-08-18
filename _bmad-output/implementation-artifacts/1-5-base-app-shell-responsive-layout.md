@@ -1,0 +1,177 @@
+# Story 1.5: Base App Shell & Responsive Layout
+
+Status: ready-for-dev
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Generated 2026-08-17 via bmad-create-story. This is the LAST story in Epic 1. Verified against live code (not just prose) on 2026-08-17: `src/app/layout.tsx` is a bare root layout (fonts + globals.css only, no nav chrome anywhere); `src/app/page.tsx` is CONFIRMED still the fully untouched create-next-app placeholder (Next.js/Vercel starter links, no auth awareness at all) — Story 1.3's own Dev Notes already flagged this via direct code verification, re-confirmed here; `src/app/usuarios/page.tsx` is a directly-navigable, shell-less route exactly as Story 1.2/1.3 both explicitly deferred ("Do not build sidebar/topbar navigation for this — the app shell is Story 1.5's scope... Story 1.5 will wire it into the shell later" — 1-2's Task 7; "the app shell doesn't exist yet" — 1-3's Dev Notes); `src/app/sign-in/page.tsx`'s own header comment already states "no app shell (out of scope per the proposal's 'Out of Scope': app shell (1.5))". `isRoleAllowed()` (Story 1.3, `src/modules/auth/roles.ts`) is confirmed used ONLY inside `require-role.ts` and its own unit test today — this story is genuinely the first consumer of that mechanism from outside the `auth` module. `globals.css` has only grayscale shadcn/Base UI default tokens (oklch grays) — no brand navy/accent colors exist anywhere in the codebase yet; this story is the first to introduce them. No component-test framework is installed (Vitest unit/integration + Playwright e2e only, confirmed via `package.json` — same gap Story 1.3 already documented). -->
+
+## Story
+
+As any authenticated user,
+I want a consistent app shell that adapts to my device,
+so that I can use Quimia IO comfortably on desktop, tablet, or phone.
+
+## Acceptance Criteria
+
+1. Given I'm on desktop/tablet, when I load any authenticated screen, then I see the dark-chrome sidebar (always visible) and topbar, showing only nav items my role permits. [Source: epics.md#Story 1.5]
+
+2. Given I'm on a phone, when I load any authenticated screen, then the sidebar collapses to an off-canvas drawer triggered from a compact top bar, and one consistent, always-visible focus-ring treatment applies across every interactive element (WCAG 2.1 AA baseline, UX-DR23). [Source: epics.md#Story 1.5]
+
+3. Given the sidebar needs to decide which nav items to render for the signed-in user's role, when it renders, then it calls `isRoleAllowed()` from `src/modules/auth/roles.ts` (Story 1.3's shared role-check function) per nav item — no new, second role-comparison mechanism is hand-rolled for navigation visibility. This is the first real consumer of `isRoleAllowed()` from outside the `auth` module, proving the mechanism Story 1.3 built specifically for future consumers like this one actually works as a cross-module interface call (AD-1). [Source: this story's core mandate; 1-3-role-based-access-control-enforced-everywhere.md Task 1 — "Both `requireRole()`... and the UI disabled-state check must call THIS function... This is the concrete mechanism that prevents the classic RBAC bug where the UI and the API silently disagree about who's allowed to do what"]
+
+4. Given `/usuarios` is the one real screen that exists today (Story 1.2/1.3, currently shell-less), when this story ships, then it renders inside the new shell with zero changes to its own page/action/RBAC logic, and Story 1.2/1.3's entire existing test suite for it (`tests/e2e/usuarios.spec.ts`'s three tests, including the non-admin-gets-404 test and the self-action-disabled-with-reason assertions) passes unmodified. [Source: this story's core mandate; 1-2-admin-manages-users-roles.md Task 7 — "Story 1.5 will wire it into the shell later"; 1-3-role-based-access-control-enforced-everywhere.md AC 4's "zero call-site changes" precedent applied here to a page instead of a guard]
+
+5. Given `src/app/page.tsx` is still the unmodified create-next-app placeholder (verified directly, not assumed), when this story ships, then the root route `/` has real, role-agnostic authenticated behavior: an unauthenticated visitor is redirected to `/sign-in` (same pattern `/usuarios` already uses), and a signed-in user of ANY role sees a minimal, professional-tone Spanish placeholder landing page inside the new shell — not a role-conditional redirect to `/usuarios` (see Dev Notes for why), and not the Next.js starter content ever again. [Source: this story's core mandate, informed directly by verified current code state]
+
+6. Given `/sign-in` and the Better Auth API route (`/api/auth/[...all]`) are explicitly out of scope for the shell (per `sign-in/page.tsx`'s own header comment and to protect Story 1.1's existing sign-in e2e coverage from a timing-sensitive regression — see Dev Notes), when this story ships, then neither file is modified, and Story 1.1's existing `tests/e2e/sign-in.spec.ts` passes unmodified. [Source: this story's own scope boundary, protecting 1-1-user-sign-in.md's existing e2e coverage]
+
+## Tasks / Subtasks
+
+- [ ] Task 1: Introduce the brand's dark-chrome design tokens (AC: 1) — `src/app/globals.css`
+  - [ ] This codebase has ZERO brand colors today — every existing token in `:root`/`.dark` is a grayscale shadcn/Base UI default (verified directly). Add four new CSS custom properties sourced from `DESIGN.md`'s color spec: navy `#0D1B36` (sidebar base), navy-topbar `#0F2044` (topbar panel tone), accent `#00C4E0` (active nav-item icon/text accent), accent-lt `#E0F8FF` (active nav-item background tint). Suggested names: `--brand-navy`, `--brand-navy-topbar`, `--brand-accent`, `--brand-accent-lt` — register them in the existing `@theme inline` block (same pattern already used for `--color-sidebar`, `--color-accent`, etc.) so Tailwind utilities like `bg-brand-navy`/`text-brand-accent` become available.
+  - [ ] Do NOT touch the existing `--accent`/`--accent-foreground` shadcn tokens (already used by unrelated components like `button.tsx`'s `ghost`/`outline` variants) — these new brand tokens are additive, under new names, not a replacement of the existing grayscale system. [Source: DESIGN.md — "Navy is the brand anchor... never used as a content-canvas background"; "Accent Cyan... active nav state... Text-unsafe on light surfaces... a fill/icon/dot color only"]
+  - [ ] Scope boundary: do NOT introduce the full `DESIGN.md` token set (semantic ok/warn/error colors, typography lockup, etc.) in this story — only the four tokens the sidebar/topbar actually need. Epic 2+ screens will extend this token set as they need it.
+
+- [ ] Task 2: Nav-item registry + RBAC-visibility (AC: 1, 3) — new file, e.g. `src/components/shell/nav-items.ts`
+  - [ ] Lives under `src/components/shell/` (sibling to `src/components/ui/`), NOT under `src/modules/` — the app shell owns no Prisma models and no domain data; it is cross-cutting UI infrastructure exactly like `src/components/ui/disabled-hint.tsx` is, not a vertical-slice module under AD-1's definition (a module is something with its own Prisma models/data boundary — the shell has none).
+  - [ ] Define a typed nav-item shape, e.g. `interface NavItem { label: string; href: string; allowedRoles: UserRole[] }` (import `UserRole` as `import type` from `@/shared/db`, same zero-runtime-import pattern `roles.ts` already uses, so this file stays safe to import from a `"use client"` sidebar component without pulling in the Prisma/`pg` module graph — re-read `roles.ts`'s own header comment for exactly why this matters before writing this file).
+  - [ ] **Scope boundary — do not scaffold placeholder nav entries for Epics 2–11.** Populate the registry with exactly ONE real entry today: `{ label: "Usuarios y Roles", href: "/usuarios", allowedRoles: ["admin"] }`, per `EXPERIENCE.md`'s own Navigation Map row ("Usuarios y Roles | Sidebar (Admin only)"). Every other IA row in that table (Pacientes, Recepción/Órdenes, Pipeline Kanban, Caja, etc.) points at a screen that does not exist yet — adding a nav item for it today would be either a dead link or an invented placeholder page nobody designed, both of which this project's established "create only what's needed, when it's needed" principle (every prior story) forbids. Each future epic adds its own entry to THIS SAME registry when its first real route ships — do not invent a second nav-config location later.
+  - [ ] Export a pure function, e.g. `visibleNavItems(role: UserRole): NavItem[]`, that filters the registry via `isRoleAllowed(role, item.allowedRoles)` (imported from `@/modules/auth/roles` — the cross-module interface call AC 3 requires; this is a plain exported function import, exactly the kind of interface AD-1 explicitly permits between modules, same reasoning `require-role.ts`'s own header comment already documents for why it stays inside `auth`). Do not inline `.includes()` or any other ad-hoc role check here — that would recreate the exact class of bug Story 1.3 built `isRoleAllowed()` specifically to prevent.
+  - [ ] **Semantic distinction from Story 1.3's `DisabledHint` — do not conflate the two.** A nav item the current role can't access is **hidden entirely** (epics.md AC 1's literal wording: "showing only nav items my role permits"), not rendered disabled-with-a-reason. `DisabledHint` (Story 1.3) is for an action visible ON a screen you CAN reach but can't perform there (UX-DR23's "RBAC-disabled actions show visibly-disabled-with-reason"); top-level navigation to a whole section you have zero access to is a different UX case with its own, already-decided answer in epics.md's own AC text. Do not wrap nav items in `DisabledHint`.
+
+- [ ] Task 3: Sidebar component (AC: 1, 2) — new file, e.g. `src/components/shell/sidebar.tsx`
+  - [ ] Dark-chrome background using Task 1's `--brand-navy` token. Renders `visibleNavItems(actor.role)` as a list of links (Next.js `<Link>`). Always visible on desktop/tablet (see Task 6 for the exact breakpoint decision); becomes the content of the off-canvas drawer on phone (Task 5) — same component, two different containers, not two different implementations of the nav list.
+  - [ ] Active-route highlighting (`{colors.accent-lt}`-tinted background per `DESIGN.md`'s `components.sidebar-nav-item` spec) is a nice-to-have polish detail, not required by either AC — implement it if straightforward (e.g. via `usePathname()`), do not treat it as blocking.
+
+- [ ] Task 4: Topbar component (AC: 1, 2) — new file, e.g. `src/components/shell/topbar.tsx`
+  - [ ] Compact bar using Task 1's `--brand-navy-topbar` token. On phone, this is where the off-canvas drawer's trigger (☰) lives, per epics.md AC 2's exact wording ("triggered from a compact top bar"). On desktop/tablet, the trigger is hidden (sidebar is already persistent — no drawer to trigger).
+  - [ ] **Scope boundary — do NOT build a Caja status chip.** `EXPERIENCE.md`'s own Navigation Map lists "Caja | Topbar chip / sidebar" as a real IA entry, but Caja/`CashSession` doesn't exist as a feature until Epic 5 — there is no state to show yet. Building an empty/placeholder chip here would be the same premature-scaffolding mistake Task 2 already rules out for the sidebar. Epic 5's own story adds this when `CashSession` ships.
+  - [ ] Branch switcher is explicitly `[PHASE 2]` (`UX-DR25`) — do not build it.
+
+- [ ] Task 5: Off-canvas drawer for phone (AC: 2) — new file, e.g. `src/components/shell/nav-drawer.tsx`
+  - [ ] Build on `@base-ui/react` (already an installed dependency — the same package `button.tsx`/other primitives already wrap) rather than adding a new dialog/drawer library. First check whether this project's shadcn registry (the `base-nova`-style registry `field.tsx`/`input.tsx`/`button.tsx` already came from) has a ready-made Sheet/Dialog primitive and add it the same way those were added (`npx shadcn add <name>`, landing under `src/components/ui/`) if one exists. If the registry has no such primitive, hand-build a minimal off-canvas drawer directly on `@base-ui/react/dialog` (focus-trapped, closable via an explicit close control and the overlay/backdrop, dismissible via Escape) — do not add Radix or any other dialog library.
+  - [ ] Drawer content is Task 3's Sidebar component, reused as-is (same nav-item list, same `visibleNavItems()` call) — not a second, parallel nav-rendering implementation.
+
+- [ ] Task 6: `(app)` route group + shell layout (AC: 1, 2, 4, 5) — new file `src/app/(app)/layout.tsx`
+  - [ ] Use a Next.js App Router route group (`(app)`) so the shell applies to every protected route without changing any URL — `(app)/usuarios/page.tsx` still serves at `/usuarios`, `(app)/page.tsx` still serves at `/`. This is the standard Next.js pattern for "one shared layout across several routes, no URL segment added" — do not invent a custom higher-order-component wrapper instead.
+  - [ ] Breakpoint decision (no exact px value is pinned by any project document — checked directly: neither `epics.md`, `PRD.md`, nor `DESIGN.md` name a number, only `EXPERIENCE.md`'s Responsive & Platform table which describes three qualitative tiers, "or" wording for tablet): **implement exactly the two-state model epics.md's own AC actually specifies** — desktop/tablet (≥ Tailwind's default `md` breakpoint, 768px) gets the full, always-visible sidebar; phone (< 768px) gets the off-canvas drawer. Do NOT build `EXPERIENCE.md`'s optional tablet icon-collapsed variant ("sidebar remains visible OR collapses to icons") — it's explicitly optional in that document's own wording, no mock exists for it, and epics.md's AC only defines two states, not three. If this needs revisiting later, that's a design follow-up, not a gap in this story.
+  - [ ] Resolve the current actor via `getCurrentActor()` (`@/modules/auth/server/get-current-actor`) — **not** `requireAdmin`/`requireRole`, since the shell is shared across every role, not restricted to one. Follow `usuarios/page.tsx`'s exact existing pattern for resolving `CurrentActorRequest` from `headers()` (`x-tenant-id`, `x-request-id` with a `randomUUID()` fallback), and its exact `catch` pattern: an `AppError` with `status === 401` (no session / inactive user) → `redirect("/sign-in")`. The shell layout does NOT need to handle 403 — it imposes no role restriction of its own; a page nested inside it (like `/usuarios`) still enforces its OWN role gate exactly as it does today, unchanged (AC 4).
+  - [ ] **Layout and page each independently call `getCurrentActor()` — this is not duplication to eliminate.** Next.js Server Components don't pass data from a `layout.tsx` down to its nested `page.tsx` via props (a layout only receives `children`); every page that needs the actor resolves it itself, same as `usuarios/page.tsx` already does inside its own `requireAdmin()` call today. Do not attempt to invent a shared-context mechanism to avoid this — it's the established, correct pattern in this codebase, not an oversight.
+  - [ ] Compose `Sidebar` + `Topbar` + `NavDrawer` (Tasks 3–5) around `{children}`.
+
+- [ ] Task 7: Move `/usuarios` into the shell (AC: 4) — `src/app/usuarios/page.tsx` → `src/app/(app)/usuarios/page.tsx`
+  - [ ] A file move only — the URL is unchanged (`/usuarios`), and route groups add no path segment. Do NOT change anything inside the file's own logic, its `requireAdmin()` gate, its `loadUsers()` function, or any of its rendered markup (the `<h1>Usuarios</h1>` heading, the table, the create form) — Task 4's AC is that this file's own behavior is byte-identical, only its filesystem location and its now-shared shell chrome change.
+  - [ ] Verify by re-running `tests/e2e/usuarios.spec.ts` unmodified — all three of its existing tests (list/create/edit-role/deactivate with self-action-disabled assertions; the client-side password-policy message test; the non-admin-gets-404 test) must still pass with zero edits to that test file.
+
+- [ ] Task 8: New root landing page (AC: 5) — delete `src/app/page.tsx`, create `src/app/(app)/page.tsx`
+  - [ ] Delete the create-next-app placeholder entirely (Next.js/Vercel template links, `next.svg`/`vercel.svg` references) — it has never been real product UI. A plain `app/page.tsx` and `app/(app)/page.tsx` cannot coexist (both would resolve to `/` — Next.js treats this as a routing conflict), so the old file must be removed, not left alongside the new one.
+  - [ ] **Decision: `/` is a role-agnostic authenticated placeholder, NOT a role-conditional redirect to `/usuarios`.** A redirect would only make sense for an admin (the only role `/usuarios` admits); a `recepcionista`/`quimico` signing in today has genuinely nowhere else to go yet (Epics 2–11 haven't shipped), so redirecting them to `/usuarios` would just trade one dead end (the old placeholder) for another (an immediate 404, since `requireAdmin()` still gates that page). Instead, `/` renders a minimal, professional-tone Spanish placeholder (e.g., "Bienvenido a Quimia IO." — matching `UX-DR22`/NFR-9's voice-and-tone standard, never playful) inside the shell for every authenticated role. Conditionally render an "Ir a Usuarios" shortcut link only when `isRoleAllowed(actor.role, ["admin"])` is true (reusing the same registry-driven visibility check as the sidebar, not a second ad-hoc check).
+  - [ ] This page resolves its own actor via `getCurrentActor()` (see Task 6's note on why the layout can't hand it down) — unauthenticated visitors never reach this far; the shell layout already redirected them to `/sign-in` before this page's own body would render.
+  - [ ] `EXPERIENCE.md`'s Information Architecture table lists "Dashboard | Login / sidebar" as the eventual real landing page — that's Epic 10's `FR-51` scope (KPIs, revenue chart, mini pipeline), not this story's. This placeholder is explicitly temporary scaffolding Epic 10 will replace, not a first draft of the Dashboard to iterate on.
+
+- [ ] Task 9: Consistent, always-visible focus-ring treatment (AC: 2) — every new interactive element from Tasks 3–5
+  - [ ] Reuse the SAME focus-visible pattern already established and consistently used elsewhere in this codebase (`button.tsx`: `focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50`) on every new nav link, the drawer trigger, and the drawer's close control. AC 2's "one consistent, always-visible focus-ring treatment" is best satisfied by matching what already exists app-wide, not by introducing a second, brand-accent-colored ring scoped only to the shell — that would make focus treatment LESS consistent, not more. Do not suppress the default outline without supplying this equally-visible substitute (`EXPERIENCE.md` Accessibility Floor: "no component may suppress the outline without supplying an equally visible substitute").
+
+- [ ] Task 10: e2e coverage for the shell (AC: 1, 2, 3, 5) — new file `tests/e2e/app-shell.spec.ts`
+  - [ ] Real ephemeral Neon branch via the existing `seedTenant`/`seedUser`/`withOwnerClient` harness (`tests/e2e/seed.ts`) — same pattern `usuarios.spec.ts`/`sign-in.spec.ts` already use.
+  - [ ] **Desktop RBAC nav visibility (AC 1, 3):** default viewport, an `admin` signs in and loads `/`; the sidebar is visible and contains a "Usuarios y Roles" link. A `recepcionista` (or `quimico`) signs in and loads `/`; the sidebar renders but does NOT contain that link — proving `isRoleAllowed()`-driven visibility end-to-end, not just by code inspection.
+  - [ ] **Phone drawer (AC 2):** `page.setViewportSize({ width: 375, height: 812 })` (Playwright config has no per-project mobile viewport today — set it explicitly in-test); the persistent sidebar is NOT visible; a compact topbar with a drawer-trigger control is visible; clicking it reveals the drawer containing the same nav content; closing it (via its close control, or pressing Escape) hides it again.
+  - [ ] **Focus-ring visibility (AC 2):** Tab-focus the drawer trigger (or a visible nav link) and assert a real rendered affordance exists — read the focused element's computed style (`outline-style`/`box-shadow`) via `page.evaluate` or `getComputedStyle` equivalent and assert it is not `none`/fully transparent, not merely that a `focus-visible:` class string is present in markup.
+  - [ ] **Unauthenticated redirect (AC 5):** an unauthenticated visit to `/` redirects to `/sign-in`; same for `/usuarios` (this second case may already be implicitly covered — confirm, don't assume).
+  - [ ] **Root landing page (AC 5):** a signed-in `recepcionista` loads `/` and sees the placeholder content (not a 404, not the old create-next-app content) and does NOT see the "Ir a Usuarios" link; a signed-in `admin` loads `/` and DOES see it.
+  - [ ] Do NOT modify `tests/e2e/usuarios.spec.ts` or `tests/e2e/sign-in.spec.ts` — both must pass exactly as they exist today (AC 4, AC 6).
+
+- [ ] Task 11: Full regression pass (AC: 4, 6)
+  - [ ] Run `npm run test`, `npm run test:integration`, `npm run test:e2e`, `npm run lint`, `tsc --noEmit`, `next build`. Confirm zero edits were needed to `tests/e2e/usuarios.spec.ts`, `tests/e2e/sign-in.spec.ts`, `src/app/sign-in/page.tsx`, `src/modules/auth/ui/sign-in-form.tsx`, or `src/app/api/auth/[...all]/route.ts` — verify this in the final diff, don't just assume it. Strict TDD followed for Task 10's new tests (this story has no unit/integration-testable business logic beyond `visibleNavItems()`, which should still get a small Vitest unit test written failing-first).
+
+## Dev Notes
+
+### Why the sign-in flow itself is explicitly untouched (AC 6) — a deliberate scope boundary, not an oversight
+
+`sign-in-form.tsx` today shows a static "Signed in successfully." message on success and never navigates anywhere — no redirect to `/` or anywhere else exists. It would be tempting to "finish the loop" by adding a post-sign-in redirect into the new shell now that one exists. **Do not do this in this story.** `tests/e2e/sign-in.spec.ts`'s two existing tests assert `page.getByTestId("sign-in-success")).toBeVisible()` immediately after clicking the sign-in button, then separately `page.goto()` elsewhere afterward — introducing an automatic client-side redirect the instant that success state renders creates a real race against that assertion (the element could navigate away before Playwright's `toBeVisible()` resolves), which would make a previously-solid, already-passing test flaky for a behavior no AC of this story actually requires. Epics.md's Story 1.5 ACs are exclusively about the shell's own shape/responsiveness on already-authenticated screens — post-sign-in redirect UX is a legitimate future enhancement, but it is not this story's job, and risking a regression in Story 1.1's coverage to add it here would violate this project's own "don't break existing e2e" discipline (see Story 1.3's own careful zero-call-site-change precedent for the same reasoning applied to a guard instead of a page).
+
+### Why `/` is a placeholder, not a redirect — read this before building Task 8
+
+The natural first instinct is "authenticated `/` should redirect to the one real screen, `/usuarios`." This breaks immediately for two of the three roles: `recepcionista` and `quimico` are correctly denied `/usuarios` by `requireAdmin()` (unchanged, AC 4) — redirecting them there would just relocate the dead end from "an old placeholder" to "an immediate 404," which is a worse outcome than today's harmless-but-wrong placeholder. A role-conditional redirect (admin → `/usuarios`, everyone else → ???) has no good answer for "everyone else" today, because no non-admin screen exists in Epic 1. The placeholder-landing-page approach sidesteps this cleanly and is honest about the app's actual current state — it will look sparse for non-admin roles until Epic 2+ ships their real screens, and that sparseness is correct, not a bug to paper over.
+
+### The exact backward-compatibility contract for `/usuarios` (AC 4)
+
+Moving `src/app/usuarios/page.tsx` to `src/app/(app)/usuarios/page.tsx` must be a pure filesystem move. Do not touch: `loadUsers()`'s `requireAdmin()` call or its tenant/request-header resolution, `<CreateUserForm />`, `<UsersTable users={...} viewerUserId={...} />`, or any class name/markup inside this file. The three existing `tests/e2e/usuarios.spec.ts` tests assert on `getByRole("heading", { name: /usuarios/i })`, `getByRole("row", ...)`, `getByRole("combobox")`, and specific disabled/`aria-describedby` reason text — none of that changes just because the page now renders inside a sidebar+topbar wrapper, as long as the page's own returned JSX is unchanged. The one thing that DOES change is that Playwright will now also see the shell's sidebar/topbar DOM on this page — verify none of the existing locators (especially the broad `getByRole("row", { name: new RegExp(...) })` ones) accidentally start matching something inside the new shell chrome; if a nav item's own markup could ever collide with a users-table row's accessible name, that's a real regression to catch here, not to discover later.
+
+### This is the first cross-module consumer of `isRoleAllowed()` — treat it as evidence, not just plumbing
+
+Story 1.3's Task 1 built `isRoleAllowed()` specifically as "the ONE place role-comparison logic lives" for BOTH server enforcement (`requireRole`) and UI visibility, but until this story, literally nothing outside `src/modules/auth/` ever called it (confirmed via direct grep of the codebase). Getting Task 2's `visibleNavItems()` to genuinely import and call `isRoleAllowed()` — not reimplement `.includes()` locally — is the actual point of AC 3, not a formality. If a future reviewer greps for `isRoleAllowed` and finds it still only referenced inside `auth/`, this story's AC 3 has not been met regardless of whether the sidebar happens to render correctly by other means.
+
+### Source tree placement
+
+```
+src/
+  app/
+    globals.css                    # MODIFIED (Task 1) — 4 new brand color tokens
+    layout.tsx                     # existing — untouched (still bare root shell: fonts + globals.css)
+    page.tsx                       # DELETED (Task 8) — create-next-app placeholder removed
+    sign-in/
+      page.tsx                     # existing — untouched (AC 6)
+    api/
+      auth/[...all]/route.ts       # existing — untouched (AC 6)
+    (app)/                         # NEW route group (Task 6) — adds no URL segment
+      layout.tsx                   # NEW (Task 6) — the shell: resolves actor, redirects on 401, composes Sidebar+Topbar+NavDrawer
+      page.tsx                     # NEW (Task 8) — root landing placeholder
+      usuarios/
+        page.tsx                   # MOVED from src/app/usuarios/page.tsx (Task 7) — logic untouched
+  components/
+    shell/                         # NEW directory (Tasks 2-5) — cross-cutting UI infra, not a domain module (AD-1)
+      nav-items.ts                 # NEW (Task 2) — registry + visibleNavItems()
+      sidebar.tsx                  # NEW (Task 3)
+      topbar.tsx                   # NEW (Task 4)
+      nav-drawer.tsx               # NEW (Task 5)
+    ui/
+      (possibly a new sheet/dialog primitive, Task 5, if the shadcn registry has one)
+tests/
+  e2e/
+    app-shell.spec.ts              # NEW (Task 10)
+    usuarios.spec.ts                # existing — UNCHANGED (AC 4)
+    sign-in.spec.ts                 # existing — UNCHANGED (AC 6)
+```
+
+### Testing standards (established by Stories 1.1-1.4, unchanged)
+
+**Vitest** (`npm run test`, `npm run test:integration`), **Playwright** (`npm run test:e2e`). No React component-test framework is installed in this project (confirmed again directly, same gap every prior story has documented) — prove UI/responsive behavior via Playwright e2e against the real rendered app, not a new unit-test dependency. `visibleNavItems()` is a plain, dependency-free function and IS unit-testable with Vitest — write it failing-first (strict TDD is active for this project). No RLS/Postgres-privilege behavior is touched by this story, so most of this story's tests don't strictly need a real Neon branch — but the e2e tests DO need real seeded tenants/users (same as every prior e2e file), so they still run against a real ephemeral Neon branch via the existing harness, never a mock.
+
+### Consistency conventions binding this story (unchanged from Stories 1.1-1.4)
+
+Spanish UI copy, professional tone (`UX-DR22`/NFR-9) for the new landing-page placeholder text and any new nav labels ("Usuarios y Roles" already matches `EXPERIENCE.md`'s own IA table verbatim — keep it exact). API errors unaffected (no new API surface in this story). No new Prisma models/migrations — this story is purely presentational/routing.
+
+### Project Structure Notes
+
+- No new Prisma models or migrations — this story adds no database surface at all.
+- `src/components/shell/` is a new top-level directory alongside the existing `src/components/ui/` — both hold cross-cutting, non-domain UI code; neither is a `src/modules/*` vertical slice.
+- Do not create files for other modules (`patients`, `catalog`, etc.) or scaffold placeholder pages for Epics 2–11 — same "create only what's needed" principle every prior story followed, applied here specifically to nav items and topbar chips (Tasks 2 and 4).
+
+### References
+
+- [Source: _bmad-output/planning-artifacts/epics.md#Epic 1: Foundation, Story 1.5] — story text, acceptance criteria (the two literal ACs), and the Epic 1 overview's "app shell exists for every later epic to build inside" mandate
+- [Source: _bmad-output/planning-artifacts/architecture/architecture-quimiaio-2026-07-28/ARCHITECTURE-SPINE.md#AD-1] — vertical-slice module boundary; why `src/components/shell/` is not a `src/modules/*` slice, and why importing `isRoleAllowed` from `@/modules/auth/roles` is a legitimate cross-module interface call, not a boundary violation
+- [Source: _bmad-output/planning-artifacts/prds/prd-quimiaio-2026-07-05/prd.md#NFR-6] — mobile-first PWA, every screen usable on a phone; reception/delivery optimized for tablet/desktop
+- [Source: _bmad-output/planning-artifacts/prds/prd-quimiaio-2026-07-05/prd.md#NFR-9] — Spanish (Mexico) UI language, MXN monetary values (not directly relevant to this story's content, but binds the new placeholder copy)
+- [Source: _bmad-output/planning-artifacts/ux-designs/ux-quimiaio-2026-07-10/EXPERIENCE.md#Information Architecture] — full Navigation Map table (all IA rows, phases, "Sidebar (Admin only)" for Usuarios y Roles); Sidebar/topbar dark-chrome and Caja/branch-switcher placement note
+- [Source: _bmad-output/planning-artifacts/ux-designs/ux-quimiaio-2026-07-10/EXPERIENCE.md#Responsive & Platform] — the three-tier breakpoint table (desktop/tablet/phone) this story's Task 6 deliberately simplifies to epics.md's own two-state AC
+- [Source: _bmad-output/planning-artifacts/ux-designs/ux-quimiaio-2026-07-10/EXPERIENCE.md#Accessibility Floor] — "Focus states are always visible... no component may suppress the outline without supplying an equally visible substitute" (AC 2); "RBAC is visible, not silent" (distinguished in Dev Notes from the hide-entirely nav case)
+- [Source: _bmad-output/planning-artifacts/ux-designs/ux-quimiaio-2026-07-10/DESIGN.md] — navy `#0D1B36`/navy-topbar `#0F2044`/accent `#00C4E0`/accent-lt `#E0F8FF` color values (Task 1); `components.sidebar-nav-item` behavioral spec
+- [Source: _bmad-output/implementation-artifacts/1-1-user-sign-in.md] — established the generic-failure/no-redirect sign-in behavior this story deliberately does not touch (AC 6)
+- [Source: _bmad-output/implementation-artifacts/1-2-admin-manages-users-roles.md] — Task 7's explicit deferral of the app shell to this story; `/usuarios`'s original shell-less implementation this story wraps without modifying
+- [Source: _bmad-output/implementation-artifacts/1-3-role-based-access-control-enforced-everywhere.md] — `isRoleAllowed()`/`requireRole()` (this story's first external consumer), `DisabledHint` (explicitly NOT reused for nav-item visibility — see Dev Notes distinction), the AD-1 cross-module-interface reasoning this story's `src/components/shell/` placement follows
+- [Source: _bmad-output/implementation-artifacts/1-4-password-policy-enforcement-nom-024-ssa3.md] — precedent for documenting "no exact numeric value pinned by any project document, reasonable default chosen" (applied here to the responsive breakpoint decision, Task 6)
+- Direct code verification (2026-08-17): `src/app/{layout,page}.tsx`, `src/app/sign-in/page.tsx`, `src/app/usuarios/page.tsx`, `src/middleware.ts`, `src/modules/auth/{roles,server/require-role,server/require-admin,server/get-current-actor}.ts` (and `roles.test.ts`), `src/components/ui/*.tsx` (button, field, input, label, separator, disabled-hint — no sheet/dialog primitive exists yet), `src/app/globals.css` (confirmed grayscale-only, no brand tokens), `src/lib/utils.ts`, `package.json` (`@base-ui/react` installed, `lucide-react` installed, no component-test framework), `playwright.config.ts` (single chromium project, no per-project mobile viewport), `tests/e2e/{usuarios.spec,sign-in.spec}.ts`, `eslint.config.mjs` (AD-3 import boundary, unaffected by this story), a full grep confirming `isRoleAllowed` has zero call sites outside `src/modules/auth/` today
+
+## Dev Agent Record
+
+### Agent Model Used
+
+_To be filled by dev agent_
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List

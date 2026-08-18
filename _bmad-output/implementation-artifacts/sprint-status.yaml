@@ -47,7 +47,7 @@ development_status:
   1-2-admin-manages-users-roles: done
   1-3-role-based-access-control-enforced-everywhere: done
   1-4-password-policy-enforcement-nom-024-ssa3: done
-  1-5-base-app-shell-responsive-layout: backlog
+  1-5-base-app-shell-responsive-layout: ready-for-dev
   epic-1-retrospective: optional
 
   epic-2: backlog
