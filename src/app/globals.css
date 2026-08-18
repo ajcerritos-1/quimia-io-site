@@ -46,6 +46,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-topbar: var(--brand-navy-topbar);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-lt: var(--brand-accent-lt);
 }
 
 :root {
@@ -81,6 +85,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Brand app-shell tokens (Story 1.5 Task 1, DESIGN.md color spec).
+   * Additive, under new names — never a replacement of the existing
+   * grayscale shadcn/Base UI tokens above (e.g. `--accent`/
+   * `--accent-foreground`, still used by unrelated components like
+   * `button.tsx`'s `ghost`/`outline` variants). The shell's dark chrome is
+   * intentionally the same regardless of the app's light/dark theme, so
+   * these are not redefined under `.dark`. */
+  --brand-navy: #0d1b36; /* sidebar base — never used as a content-canvas background */
+  --brand-navy-topbar: #0f2044; /* topbar panel tone */
+  --brand-accent: #00c4e0; /* active nav-item icon/text accent — fill/icon color only, text-unsafe on light surfaces */
+  --brand-accent-lt: #e0f8ff; /* active nav-item background tint */
 }
 
 .dark {

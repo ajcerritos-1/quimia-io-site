@@ -1,9 +1,12 @@
 /**
- * Usuarios admin route (Story 1.2 Task 7, AC 1/2/3). Directly-navigable —
- * no sidebar/topbar app shell here (Story 1.5's scope). Gated by
- * `requireAdmin()` at the page level: an unauthenticated visitor is
- * redirected to sign in; a non-admin gets a 404 (do not reveal the route
- * exists to a caller who isn't allowed to use it).
+ * Usuarios admin route (Story 1.2 Task 7, AC 1/2/3). Moved into the `(app)`
+ * shell route group by Story 1.5 Task 7 — a pure filesystem move, no
+ * behavior change: the URL is unchanged (`/usuarios`, route groups add no
+ * path segment), and nothing inside this file's own logic, its
+ * `requireAdmin()` gate, its `loadUsers()` function, or its rendered markup
+ * was touched. Gated by `requireAdmin()` at the page level: an
+ * unauthenticated visitor is redirected to sign in; a non-admin gets a 404
+ * (do not reveal the route exists to a caller who isn't allowed to use it).
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
