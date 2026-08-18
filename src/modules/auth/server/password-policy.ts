@@ -45,12 +45,15 @@ function meetsComplexity(password: string): boolean {
 }
 
 // AC 1's "specific reason" — Spanish UI copy, professional tone (UX-DR22,
-// NFR-9). Reused for BOTH the length and complexity failures below so a
-// caller never has to guess which specific message applies; both describe
-// the same one policy.
-const PASSWORD_POLICY_MESSAGE = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres e incluir mayúsculas, minúsculas, números o símbolos (al menos 3 de 4 tipos).`;
+// NFR-9). Review Findings patch (2026-08-17): a single shared message for
+// both the length and complexity failures told a user who already meets
+// complexity but is too short to "add character variety" they already
+// have. Split into two messages so each Zod issue reports the ACTUAL
+// failing condition.
+const PASSWORD_LENGTH_MESSAGE = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+const PASSWORD_COMPLEXITY_MESSAGE = `La contraseña debe incluir mayúsculas, minúsculas, números y símbolos (al menos 3 de 4 tipos).`;
 
 export const passwordPolicySchema = z
   .string()
-  .min(MIN_PASSWORD_LENGTH, PASSWORD_POLICY_MESSAGE)
-  .refine(meetsComplexity, PASSWORD_POLICY_MESSAGE);
+  .min(MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_MESSAGE)
+  .refine(meetsComplexity, PASSWORD_COMPLEXITY_MESSAGE);

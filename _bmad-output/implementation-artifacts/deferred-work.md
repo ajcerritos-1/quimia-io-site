@@ -1,5 +1,12 @@
 # Deferred Work
 
+## Deferred from: code review of story-1-4-password-policy-enforcement-nom-024-ssa3 (2026-08-18)
+
+- **Timing side-channel on the lockout threshold-crossing attempt** — the 5th (crossing) failed-attempt does one extra `AuditLog` insert the prior attempts don't, making it measurably slower than attempts 1-4. A narrow instance of the timing oracle Story 1.1's dummy-verify pattern otherwise closes. Product decision 2026-08-18: not worth the engineering cost to fully equalize branch timings right now, given this app's threat model (single-tenant lab staff, not a public high-value target). Revisit if that changes.
+- **Unresolved migration drift on Story 1.2's `20260816231455_audit_log` migration.** The dev/test database recorded a checksum for this migration from before its code-review edit (added `@@index([entityId])`); Story 1.4's implementation routed around this by creating a new migration + `prisma migrate resolve --applied` rather than fixing the underlying drift. **Needs a real fix**: reconcile the recorded migration checksum (or the migration history) so `prisma migrate deploy` doesn't require manual `resolve` workarounds on fresh environments going forward. Worth its own small chore/story before this compounds further.
+- The `"anonymous"` scoped role (used by sign-in's pre-session lookups and now by lockout bookkeeping) performs privileged writes that work only because current RLS policies are tenant-only, not role-based. Premature to guard against today; revisit if/when role-scoped RLS policies are introduced.
+- Once a lockout window expires, the next wrong-password attempt immediately re-locks the account (the failed-attempt counter only resets on a successful sign-in, not on lockout expiry) — an accepted, intentional stricter posture; epics.md doesn't require a fresh-attempts grace period after expiry.
+
 ## Deferred from: code review of story-1-2-admin-manages-users-roles (2026-08-16)
 
 - Case-sensitive email/nickname uniqueness now human-exercised for the first time via the Usuarios admin form — the `@@unique` constraints are plain Postgres text uniqueness (case-sensitive), inherited from Story 1.1's schema design, not introduced by Story 1.2. Deferred, pre-existing.

@@ -140,6 +140,7 @@ async function resolveUserForSignIn(
         accounts: {
           where: { providerId: "credential" },
           select: { password: true },
+          orderBy: { createdAt: "asc" },
           take: 1,
         },
       },
@@ -162,36 +163,66 @@ async function resolveUserForSignIn(
 // wrapper (AD-10's single write path). No acting admin exists for a
 // self-triggered lockout — the locked-out user's own id is `actorUserId`
 // (Dev Notes: "who this action is about", not a new nullable actor field).
+//
+// Review Findings patch (2026-08-17): the previous version computed
+// `newCount` from the caller's earlier, separate read of
+// `failedLoginAttempts` (a stale read-then-write) instead of an atomic
+// increment — concurrent requests against the same account could lose
+// updates, and could each independently observe "I crossed the threshold"
+// and each write their own `USER_ACCOUNT_LOCKED` audit row. Fixed with two
+// changes:
+//   1. `{ increment: 1 }` is an atomic, single-statement UPDATE — Postgres
+//      serializes concurrent increments on the same row via its normal
+//      row-level locking, so the count returned here is always the true
+//      post-increment value, never a stale in-memory computation.
+//   2. `lockedUntil` is only ever set via a conditional `updateMany` guarded
+//      on `lockedUntil: null` — a compare-and-swap. Because this whole
+//      function already runs inside one interactive transaction that holds
+//      an exclusive lock on this user's row (acquired by the increment
+//      above), no other concurrent transaction can race this CAS: whichever
+//      request's transaction reaches here first while `lockedUntil` is
+//      still null is the ONLY one whose `updateMany` matches a row and
+//      therefore the ONLY one that writes the audit log. Every other
+//      request that also crosses the threshold (e.g. attempts 6, 7, ... once
+//      already locked) sees `lockedUntil` already set, matches zero rows,
+//      and skips the audit write — "exactly one audit row per lockout" holds
+//      regardless of how many concurrent requests cross the threshold.
 async function recordFailedAttempt(
   tenantId: string,
   user: ResolvedSignInUser,
 ): Promise<void> {
-  const newCount = user.failedLoginAttempts + 1;
-  const crossesThreshold = newCount >= MAX_FAILED_LOGIN_ATTEMPTS;
-
   await transaction({ tenantId, role: "anonymous" }, async (tx) => {
-    await tx.user.update({
+    const updated = await tx.user.update({
       where: { id: user.id },
-      data: {
-        failedLoginAttempts: newCount,
-        ...(crossesThreshold
-          ? {
-              lockedUntil: new Date(
-                Date.now() + LOCKOUT_DURATION_MINUTES * 60_000,
-              ),
-            }
-          : {}),
-      },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
     });
-    if (crossesThreshold) {
-      await writeAuditLog(tx, {
-        tenantId,
-        entity: "User",
-        entityId: user.id,
-        action: "USER_ACCOUNT_LOCKED",
-        actorUserId: user.id,
-      });
-    }
+    const newCount = updated.failedLoginAttempts;
+    if (newCount < MAX_FAILED_LOGIN_ATTEMPTS) return;
+
+    const lockedUntil = new Date(
+      Date.now() + LOCKOUT_DURATION_MINUTES * 60_000,
+    );
+    const lockResult = await tx.user.updateMany({
+      where: { id: user.id, lockedUntil: null },
+      data: { lockedUntil },
+    });
+    // Someone else's transaction already flipped the lock (this request
+    // crossed the threshold too, but wasn't first) — nothing left to audit.
+    if (lockResult.count === 0) return;
+
+    await writeAuditLog(tx, {
+      tenantId,
+      entity: "User",
+      entityId: user.id,
+      action: "USER_ACCOUNT_LOCKED",
+      before: { failedLoginAttempts: newCount - 1 },
+      after: {
+        failedLoginAttempts: newCount,
+        lockedUntil: lockedUntil.toISOString(),
+      },
+      actorUserId: user.id,
+    });
   });
 }
 

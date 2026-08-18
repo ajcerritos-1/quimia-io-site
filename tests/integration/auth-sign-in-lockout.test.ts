@@ -15,13 +15,18 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+// Review Findings patch (2026-08-17): import the real constant instead of
+// hardcoding its value as a literal, so a future rename of
+// `AUTH_INVALID_CREDENTIALS` fails THIS test loudly at its source of truth
+// instead of silently diverging.
+import { AUTH_INVALID_CREDENTIALS } from "../../src/modules/auth/server/auth";
 
 const PASSWORD = "Correct-Horse-Battery-Staple-1!";
 const WRONG_PASSWORD = "totally-different-password-99";
 const GENERIC_FAILURE = {
   ok: false,
-  code: "AUTH_INVALID_CREDENTIALS",
-  message: "Invalid credentials.",
+  code: AUTH_INVALID_CREDENTIALS.code,
+  message: AUTH_INVALID_CREDENTIALS.message,
 };
 
 interface SeededUser {
@@ -74,7 +79,7 @@ async function getUserLockoutState(userId: string) {
 
 async function getLockAuditRows(userId: string) {
   const { rows } = await owner.query(
-    'SELECT action, "entityId", "actorUserId" FROM "audit_log" WHERE "entityId" = $1 AND action = $2',
+    'SELECT action, "entityId", "actorUserId", before, after FROM "audit_log" WHERE "entityId" = $1 AND action = $2',
     [userId, "USER_ACCOUNT_LOCKED"],
   );
   return rows;
@@ -113,6 +118,101 @@ describe("signIn — account lockout (Story 1.4 Task 5/6, AC 2)", () => {
     expect(state.lockedUntil).not.toBeNull();
     expect(new Date(state.lockedUntil as Date).getTime()).toBeGreaterThan(Date.now());
 
+    const auditRows = await getLockAuditRows(user.userId);
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({
+      action: "USER_ACCOUNT_LOCKED",
+      entityId: user.userId,
+      actorUserId: user.userId,
+    });
+    // Review Findings patch (2026-08-17): before/after, matching every other
+    // audit call site's convention in this codebase.
+    expect(auditRows[0].before).toEqual({
+      failedLoginAttempts: MAX_FAILED_LOGIN_ATTEMPTS - 1,
+    });
+    expect(auditRows[0].after.failedLoginAttempts).toBe(
+      MAX_FAILED_LOGIN_ATTEMPTS,
+    );
+    expect(
+      new Date(auditRows[0].after.lockedUntil as string).getTime(),
+    ).toBeGreaterThan(Date.now());
+  }, 60_000);
+
+  it("an already-locked account's failedLoginAttempts stops climbing while locked (Review Findings patch)", async () => {
+    const tenantId = await seedTenant(owner);
+    const user = await seedUser(owner, tenantId);
+
+    const { signIn } = await import("../../src/modules/auth/server/sign-in.action");
+    const { MAX_FAILED_LOGIN_ATTEMPTS } = await import(
+      "../../src/modules/auth/server/account-lockout"
+    );
+
+    for (let attempt = 0; attempt < MAX_FAILED_LOGIN_ATTEMPTS; attempt += 1) {
+      await signIn(
+        { identifier: user.email, password: WRONG_PASSWORD },
+        { tenantId, isActive: true },
+        `req-${randomUUID()}`,
+      );
+    }
+
+    const lockedState = await getUserLockoutState(user.userId);
+    expect(lockedState.failedLoginAttempts).toBe(MAX_FAILED_LOGIN_ATTEMPTS);
+    expect(lockedState.lockedUntil).not.toBeNull();
+
+    // signIn()'s early `lockedUntil` check returns BEFORE ever calling
+    // `recordFailedAttempt` — a wrong-password attempt against an
+    // already-locked account must not touch the counter at all.
+    const result = await signIn(
+      { identifier: user.email, password: WRONG_PASSWORD },
+      { tenantId, isActive: true },
+      `req-${randomUUID()}`,
+    );
+    expect(result).toEqual(GENERIC_FAILURE);
+
+    const stillLockedState = await getUserLockoutState(user.userId);
+    expect(stillLockedState.failedLoginAttempts).toBe(
+      MAX_FAILED_LOGIN_ATTEMPTS,
+    );
+
+    const auditRows = await getLockAuditRows(user.userId);
+    expect(auditRows).toHaveLength(1);
+  }, 60_000);
+
+  it("concurrent failed sign-in attempts crossing the threshold write exactly one USER_ACCOUNT_LOCKED audit row (Review Findings patch)", async () => {
+    const tenantId = await seedTenant(owner);
+    const user = await seedUser(owner, tenantId);
+
+    const { signIn } = await import("../../src/modules/auth/server/sign-in.action");
+    const { MAX_FAILED_LOGIN_ATTEMPTS } = await import(
+      "../../src/modules/auth/server/account-lockout"
+    );
+
+    const CONCURRENT_ATTEMPTS = MAX_FAILED_LOGIN_ATTEMPTS + 3;
+
+    const results = await Promise.all(
+      Array.from({ length: CONCURRENT_ATTEMPTS }, () =>
+        signIn(
+          { identifier: user.email, password: WRONG_PASSWORD },
+          { tenantId, isActive: true },
+          `req-${randomUUID()}`,
+        ),
+      ),
+    );
+
+    for (const result of results) {
+      expect(result).toEqual(GENERIC_FAILURE);
+    }
+
+    const state = await getUserLockoutState(user.userId);
+    expect(state.failedLoginAttempts).toBeGreaterThanOrEqual(
+      MAX_FAILED_LOGIN_ATTEMPTS,
+    );
+    expect(state.failedLoginAttempts).toBeLessThanOrEqual(CONCURRENT_ATTEMPTS);
+    expect(state.lockedUntil).not.toBeNull();
+
+    // The one invariant that matters most under concurrency: no matter how
+    // many concurrent requests observe "I crossed the threshold", only ONE
+    // of them may ever win the compare-and-swap and write the audit row.
     const auditRows = await getLockAuditRows(user.userId);
     expect(auditRows).toHaveLength(1);
     expect(auditRows[0]).toMatchObject({

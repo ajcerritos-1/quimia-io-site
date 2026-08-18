@@ -103,6 +103,61 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     await expect(row.getByRole("button", { name: /desactivar/i })).toHaveCount(0);
   });
 
+  test("create-user form renders the specific password-policy message inline for a client-side rejection (Review Findings patch)", async ({
+    page,
+  }) => {
+    const { tenant, admin } = await withOwnerClient(async (client) => {
+      const tenant = await seedTenant(client);
+      const admin = await seedUser(client, tenant.tenantId, PASSWORD, "admin");
+      return { tenant, admin };
+    });
+
+    await signInViaUi(page, tenant.slug, admin.email);
+    await page.goto(tenantUrl(tenant.slug, "/usuarios"));
+
+    const newEmail = `nuevo-${Date.now()}@example.com`;
+    const newNickname = `nuevo${Date.now()}`;
+
+    // React resets this form's uncontrolled inputs after every action call,
+    // including a validation-failure call (the action promise still
+    // resolves, it just carries `ok: false`) — so every attempt below
+    // refills every field, mirroring how a real user would re-enter data
+    // after a rejected submission rather than relying on values surviving
+    // across submits.
+    async function fillAndSubmit(password: string): Promise<void> {
+      await page.getByLabel(/^nombre$/i).fill("Usuario Nuevo");
+      await page.getByLabel(/nickname/i).fill(newNickname);
+      await page.getByLabel(/^email$/i).fill(newEmail);
+      await page.getByLabel(/^rol$/i).selectOption("quimico");
+      await page.getByLabel(/contraseña inicial/i).fill(password);
+      await page.getByRole("button", { name: /crear usuario/i }).click();
+    }
+
+    // 8 chars, hits all 4 character classes but fails the 12-char minimum —
+    // the client must render the LENGTH-specific message, not the
+    // complexity one (this is the first real UI exercise of the shared
+    // `passwordPolicySchema` on the client, not just code inspection).
+    await fillAndSubmit("Ab1!Ab1!");
+    await expect(
+      page.getByText("La contraseña debe tener al menos 12 caracteres."),
+    ).toBeVisible();
+
+    // 12+ chars, all lowercase (1 of 4 classes) — the client must now
+    // render the COMPLEXITY-specific message instead.
+    await fillAndSubmit("alllowercase");
+    await expect(
+      page.getByText(
+        "La contraseña debe incluir mayúsculas, minúsculas, números y símbolos (al menos 3 de 4 tipos).",
+      ),
+    ).toBeVisible();
+
+    // A password meeting the shared policy actually goes through — proves
+    // this was a real client-side Zod rejection above, not a static string
+    // the page never removes.
+    await fillAndSubmit("Password-123!");
+    await expect(page.getByText(newNickname)).toBeVisible();
+  });
+
   test("a non-admin cannot reach /usuarios", async ({ page }) => {
     const { tenant, recepcionista } = await withOwnerClient(async (client) => {
       const tenant = await seedTenant(client);
