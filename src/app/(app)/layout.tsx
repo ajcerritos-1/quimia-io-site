@@ -23,47 +23,25 @@
  * tablet variant (out of scope, see this story's Dev Notes).
  *
  * This layout and any nested page (e.g. `(app)/page.tsx`) each
- * independently call `getCurrentActor()` — Next.js Server Components don't
- * pass data from a layout down to its nested page via props (a layout only
+ * independently resolve the actor — Next.js Server Components don't pass
+ * data from a layout down to its nested page via props (a layout only
  * receives `children`), so this is the established, correct pattern in this
- * codebase, not duplication to eliminate.
+ * codebase, not duplication to eliminate. Both share the same
+ * `resolveActor()` helper (code review P3), and the underlying
+ * `getCurrentActor()` resolution is memoized per request (code review P4),
+ * so the two independent calls don't pay for duplicate session/user queries.
  */
 import "server-only";
-import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
-import { UNRESOLVED_TENANT } from "@/middleware";
-import { AppError } from "@/shared/http/errors";
-import {
-  getCurrentActor,
-  type Actor,
-} from "@/modules/auth/server/get-current-actor";
+import { resolveActor } from "@/modules/auth/server/resolve-actor";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
-
-async function resolveShellActor(): Promise<Actor> {
-  const requestHeaders = await headers();
-  const tenantId = requestHeaders.get("x-tenant-id");
-  if (!tenantId || tenantId === UNRESOLVED_TENANT) notFound();
-  const requestId = requestHeaders.get("x-request-id") ?? randomUUID();
-
-  try {
-    return await getCurrentActor(
-      { headers: requestHeaders, tenantId, requestId },
-      async (actor) => actor,
-    );
-  } catch (error) {
-    if (error instanceof AppError && error.status === 401) redirect("/sign-in");
-    throw error;
-  }
-}
 
 export default async function AppShellLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const actor = await resolveShellActor();
+  const actor = await resolveActor();
 
   return (
     <div className="flex min-h-full flex-1">

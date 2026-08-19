@@ -10,48 +10,31 @@
  * unchanged). Every authenticated role sees this same minimal, professional-
  * tone Spanish placeholder (`UX-DR22`/NFR-9's voice-and-tone standard).
  *
- * The "Ir a Usuarios" shortcut renders only when `isRoleAllowed(actor.role,
- * ["admin"])` is true — the same registry-driven visibility check the
- * sidebar uses, not a second ad-hoc check.
+ * The "Ir a Usuarios" shortcut renders only when the signed-in role sees the
+ * `/usuarios` nav item in the registry (`visibleNavItems(...)` — which is
+ * itself driven by `isRoleAllowed()` under the hood, AC 3). This derives the
+ * visibility from the single source of truth (code review S1) instead of a
+ * second hardcoded `["admin"]` literal, so if the `/usuarios` admin
+ * requirement ever changes, only the registry (`nav-items.ts`) changes.
  *
- * Resolves its own actor via `getCurrentActor()` (see `(app)/layout.tsx`'s
- * note on why the layout can't hand it down) — unauthenticated visitors
- * never reach this far; the shell layout already redirected them to
- * `/sign-in` before this page's own body would render.
+ * Resolves its own actor via the shared `resolveActor()` (see
+ * `(app)/layout.tsx`'s note on why the layout can't hand it down) —
+ * unauthenticated visitors never reach this far; the shell layout already
+ * redirected them to `/sign-in` before this page's own body would render.
  *
  * This placeholder is explicitly temporary scaffolding — Epic 10's real
  * Dashboard (`FR-51`) replaces it, not a first draft to iterate on.
  */
 import "server-only";
-import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { UNRESOLVED_TENANT } from "@/middleware";
-import { AppError } from "@/shared/http/errors";
-import { isRoleAllowed } from "@/modules/auth/roles";
-import { getCurrentActor, type Actor } from "@/modules/auth/server/get-current-actor";
-
-async function resolveActor(): Promise<Actor> {
-  const requestHeaders = await headers();
-  const tenantId = requestHeaders.get("x-tenant-id");
-  if (!tenantId || tenantId === UNRESOLVED_TENANT) notFound();
-  const requestId = requestHeaders.get("x-request-id") ?? randomUUID();
-
-  try {
-    return await getCurrentActor(
-      { headers: requestHeaders, tenantId, requestId },
-      async (actor) => actor,
-    );
-  } catch (error) {
-    if (error instanceof AppError && error.status === 401) redirect("/sign-in");
-    throw error;
-  }
-}
+import { resolveActor } from "@/modules/auth/server/resolve-actor";
+import { visibleNavItems } from "@/components/shell/nav-items";
 
 export default async function HomePage() {
   const actor = await resolveActor();
-  const canManageUsers = isRoleAllowed(actor.role, ["admin"]);
+  const canManageUsers = visibleNavItems(actor.role).some(
+    (item) => item.href === "/usuarios",
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-8">
