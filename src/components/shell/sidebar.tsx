@@ -34,14 +34,6 @@ export function Sidebar({ role, className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const items = visibleNavItems(role);
 
-  if (items.length === 0) {
-    // No nav items for this role today (recepcionista/quimico) — render
-    // NOTHING rather than an a11y-empty `<nav>` landmark + dead navy strip
-    // (code review P2). The desktop sidebar then disappears for non-admin
-    // roles, which is correct: there is no admin-only nav to show them.
-    return null;
-  }
-
   return (
     <nav
       aria-label="Navegación principal"
