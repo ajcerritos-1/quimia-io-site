@@ -17,7 +17,19 @@
  *
  * Drawer content is `Sidebar` reused as-is (same `visibleNavItems()` call,
  * same nav list) — not a second, parallel nav-rendering implementation.
+ *
+ * The drawer is a controlled dialog (code review P1): the open state is
+ * owned here so it can be closed not only by the explicit close control /
+ * Escape / backdrop (all still provided by `Dialog.Root`), but also
+ * (a) when a nav `<Link>` inside the reused `Sidebar` is tapped
+ * (`onNavigate={() => setOpen(false)}` — otherwise tapping "Usuarios y
+ * Roles" navigates while the backdrop + drawer keep covering the page), and
+ * (b) when the viewport crosses up to desktop (`matchMedia`'s 768px
+ * `change` listener — otherwise resizing phone->tablet leaves the
+ * `fixed inset-0 z-40` backdrop overlaying the now-persistent sidebar). The
+ * listener is cleaned up on unmount.
  */
+import { useEffect, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu, X } from "lucide-react";
 import type { UserRole } from "@/shared/db";
@@ -33,8 +45,23 @@ const iconButtonClassName =
   "inline-flex size-8 items-center justify-center rounded-lg border border-transparent text-white outline-none transition-colors hover:bg-white/10 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function NavDrawer({ role }: NavDrawerProps) {
+  const [open, setOpen] = useState(false);
+
+  // Close the drawer when the viewport crosses up to the desktop/tablet
+  // breakpoint (768px) while it's open — otherwise the persistent sidebar
+  // appears underneath a leftover `fixed inset-0 z-40` backdrop (P1). The
+  // listener is removed on unmount.
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 768px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setOpen(false);
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
   return (
-    <Dialog.Root>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
       {/* Trigger only appears on phone (Task 4: "On desktop/tablet, the
        * trigger is hidden — sidebar is already persistent, no drawer to
        * trigger"). */}
@@ -59,7 +86,11 @@ export function NavDrawer({ role }: NavDrawerProps) {
               <X aria-hidden="true" className="size-5" />
             </Dialog.Close>
           </div>
-          <Sidebar role={role} className="flex flex-1 bg-transparent p-4 pt-0" />
+          <Sidebar
+            role={role}
+            onNavigate={() => setOpen(false)}
+            className="flex flex-1 bg-transparent p-4 pt-0"
+          />
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

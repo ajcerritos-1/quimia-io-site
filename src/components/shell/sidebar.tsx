@@ -23,11 +23,24 @@ import { visibleNavItems } from "./nav-items";
 export interface SidebarProps {
   role: UserRole;
   className?: string;
+  /** Optional callback fired after a nav `<Link>` is activated — lets a
+   * container that shows the sidebar in a transient overlay (the phone
+   * `NavDrawer`) close itself on navigation (code review P1). Ignored when
+   * unset (desktop/tablet persistent placement). */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ role, className }: SidebarProps) {
+export function Sidebar({ role, className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const items = visibleNavItems(role);
+
+  if (items.length === 0) {
+    // No nav items for this role today (recepcionista/quimico) — render
+    // NOTHING rather than an a11y-empty `<nav>` landmark + dead navy strip
+    // (code review P2). The desktop sidebar then disappears for non-admin
+    // roles, which is correct: there is no admin-only nav to show them.
+    return null;
+  }
 
   return (
     <nav
@@ -40,6 +53,7 @@ export function Sidebar({ role, className }: SidebarProps) {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               // Same focus-visible treatment as `button.tsx` (Task 9, AC 2):
