@@ -1,5 +1,11 @@
 # Deferred Work
 
+## Deferred from: code review of story-1-5-base-app-shell-responsive-layout (2026-08-18)
+
+- Active-nav-item highlighting (`Sidebar`) uses exact `pathname === item.href` equality — won't mark a nav item active from a future nested sub-route (e.g. `/usuarios/[id]`). Explicitly out of scope per the story's own Task 3; currently unreachable (no sub-routes exist yet). Revisit when the first nested route under a nav item ships.
+- The shell's `notFound()`-on-missing-tenant-header guard now sits at the root of every authenticated route (previously only `/usuarios`) with no test exercising that branch at this higher-stakes location. Blocked on the Windows e2e-hang fix (above) before a new e2e assertion can actually run.
+- `Dialog.Popup`'s own `w-64` (nav-drawer.tsx) and `Sidebar`'s base `w-64` are two independent, uncoordinated declarations of the same width value — low risk today (one caller pair), cosmetic technical debt.
+
 ## Deferred from: story-1-5-base-app-shell-responsive-layout dev-story (2026-08-18)
 
 - **`npm run test:e2e` hangs indefinitely on this Windows dev machine when run through Playwright**, every time, at the same point (right after Next.js's middleware-deprecation notice, before `next build` output ever appears) — confirmed NOT an application bug: running `npx tsx scripts/e2e/start-server.ts` directly (bypassing Playwright's process launcher) works perfectly, full build + server ready in ~200ms. Isolated to how Playwright spawns nested `execFileSync`/`spawn` process trees on Windows — a known-fragile category (`docs/e2e-testing.md` already documents two prior Windows-specific workarounds in this same script). Needs real investigation (likely a stdio-pipe-buffering deadlock across the nested `npx`-in-`npx` layers) — candidate fixes: redirect `execFileSync`'s stdio to `"pipe"`/a file instead of `"inherit"`, or run the branch-creation/migration/build steps without nesting another `npx` shell layer inside the one Playwright already spawns. Blocks e2e verification for Story 1.5 and any future story until fixed.
