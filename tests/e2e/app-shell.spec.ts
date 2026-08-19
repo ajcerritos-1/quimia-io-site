@@ -38,6 +38,10 @@ test.describe("App shell — desktop RBAC nav visibility (AC 1, 3)", () => {
     await signInViaUi(page, tenant.slug, admin.email);
     await page.goto(tenantUrl(tenant.slug, "/"));
 
+    // This navigation locator resolves to exactly one element only because of
+    // two stacked defaults — `Dialog.Portal`'s `keepMounted={false}` and the
+    // desktop sidebar's Tailwind `hidden md:flex` (see the note in
+    // `nav-drawer.tsx`). Don't "fix" either without reading that comment.
     const sidebar = page.getByRole("navigation", { name: /navegación principal/i });
     await expect(sidebar).toBeVisible();
     await expect(

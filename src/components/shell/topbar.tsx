@@ -13,6 +13,7 @@
  */
 import type { UserRole } from "@/shared/db";
 import { NavDrawer } from "./nav-drawer";
+import { APP_NAME } from "./brand";
 
 export interface TopbarProps {
   role: UserRole;
@@ -22,7 +23,7 @@ export function Topbar({ role }: TopbarProps) {
   return (
     <header className="flex h-14 items-center gap-3 bg-brand-navy-topbar px-4">
       <NavDrawer role={role} />
-      <span className="text-sm font-semibold text-white">Quimia IO</span>
+      <span className="text-sm font-semibold text-white">{APP_NAME}</span>
     </header>
   );
 }

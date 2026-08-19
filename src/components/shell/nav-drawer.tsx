@@ -34,6 +34,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Menu, X } from "lucide-react";
 import type { UserRole } from "@/shared/db";
 import { Sidebar } from "./sidebar";
+import { APP_NAME } from "./brand";
 
 export interface NavDrawerProps {
   role: UserRole;
@@ -72,13 +73,21 @@ export function NavDrawer({ role }: NavDrawerProps) {
         <Menu aria-hidden="true" className="size-5" />
       </Dialog.Trigger>
       <Dialog.Portal>
+        {/* NOTE (code review): the e2e `getByRole("navigation", ...)` locator
+         * in `app-shell.spec.ts` resolves to exactly one element only because
+         * of two stacked defaults: `Dialog.Portal`'s `keepMounted={false}`
+         * (the popup is unmounted while closed) and the desktop `Sidebar`'s
+         * Tailwind `hidden md:flex` (removed from the a11y tree on phone). If
+         * a future "exit animation" change sets `keepMounted`, this test will
+         * break with a confusing strict-mode-violation error — read this
+         * comment before touching either. */}
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50" />
         <Dialog.Popup
           aria-label="Menú de navegación"
           className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-brand-navy"
         >
           <div className="flex items-center justify-between p-4">
-            <span className="text-sm font-semibold text-white">Quimia IO</span>
+            <span className="text-sm font-semibold text-white">{APP_NAME}</span>
             <Dialog.Close
               aria-label="Cerrar menú de navegación"
               className={iconButtonClassName}
