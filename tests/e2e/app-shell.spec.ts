@@ -116,6 +116,32 @@ test.describe("App shell — phone off-canvas drawer (AC 2)", () => {
     await expect(drawerNav).not.toBeVisible();
   });
 
+  test("tapping a nav link inside the drawer closes it (P1 regression)", async ({
+    page,
+  }) => {
+    const { tenant, admin } = await withOwnerClient(async (client) => {
+      const tenant = await seedTenant(client);
+      const admin = await seedUser(client, tenant.tenantId, PASSWORD, "admin");
+      return { tenant, admin };
+    });
+
+    await signInViaUi(page, tenant.slug, admin.email);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(tenantUrl(tenant.slug, "/"));
+
+    const trigger = page.getByRole("button", { name: /abrir menú de navegación/i });
+    await trigger.click();
+    const drawerNav = page.getByRole("navigation", { name: /navegación principal/i });
+    await expect(drawerNav).toBeVisible();
+
+    // P1 (2026-08-18): tapping a nav link left the drawer/backdrop covering
+    // the newly-navigated page. The fix wired `Sidebar.onNavigate` to close
+    // the drawer — this assertion catches a regression of the original bug.
+    await drawerNav.getByRole("link", { name: /usuarios y roles/i }).click();
+    await expect(drawerNav).not.toBeVisible();
+    await expect(page).toHaveURL(/\/usuarios$/);
+  });
+
   test("the focused drawer trigger renders a real, visible focus affordance, not just a class string (AC 2)", async ({
     page,
   }) => {
@@ -137,9 +163,39 @@ test.describe("App shell — phone off-canvas drawer (AC 2)", () => {
       document.activeElement ? getComputedStyle(document.activeElement).boxShadow : null,
     );
 
+    // Strengthened assertion (2026-08-24 review patch): a bare "not none"
+    // check would pass for ANY box-shadow, including a transparent or
+    // zero-spread one. A real visible ring (the story's Task 9
+    // `focus-visible:ring-3 focus-visible:ring-ring/50` pattern) renders as
+    // a colored shadow with a >= 2px spread — assert that, not just presence.
+    //
+    // Tailwind's ring chain serializes as a box-shadow LIST whose last entry
+    // is a trailing empty `0 0 #0000` shadow — so "the" shadow is never one
+    // value. Parse every shadow and accept if ANY of them is a visible ring
+    // (spread >= 2px AND non-transparent color). Fixed 2026-08-24 review:
+    // the original patch grabbed the LAST shadow (the empty one) and the
+    // FIRST rgba() (also transparent), so it would false-fail on a correct
+    // render — verified against the project's actual Tailwind 4.3.3 output.
     expect(boxShadow).not.toBeNull();
     expect(boxShadow).not.toBe("none");
     expect(boxShadow).not.toBe("");
+    const ringVisible = (boxShadow ?? "")
+      .split(", ")
+      .some((shadow) => {
+        // Spread is the last px token in both color-first and color-last
+        // serializations (offsets/blur/spread carry px; the color never does).
+        const spread = Number(shadow.match(/([\d.]+)px\s*$/)?.[1]);
+        if (Number.isNaN(spread) || spread < 2) return false;
+        // Color alpha: rgba(…, a) / rgb(… / a) -> 4th component; opaque
+        // rgb()/hex/named colors have no alpha -> treat as fully visible.
+        const color = shadow.match(/rgba?\(\s*([^)]*)\)/);
+        if (!color) return true;
+        const parts = color[1].split(/[,/]/).map((p) => p.trim());
+        const alpha = parts.length >= 4 ? parts[3] : "1";
+        const alphaNum = alpha.endsWith("%") ? parseFloat(alpha) / 100 : parseFloat(alpha);
+        return alphaNum > 0;
+      });
+    expect(ringVisible).toBe(true);
   });
 });
 
