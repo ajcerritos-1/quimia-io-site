@@ -1,5 +1,5 @@
 # generated: 2026-08-02
-# last_updated: 2026-08-18
+# last_updated: 2026-08-24
 # project: quimiaio
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,19 +35,19 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-08-02
-last_updated: 2026-08-18
+last_updated: 2026-08-24
 project: quimiaio
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-user-sign-in: done
   1-2-admin-manages-users-roles: done
   1-3-role-based-access-control-enforced-everywhere: done
   1-4-password-policy-enforcement-nom-024-ssa3: done
-  1-5-base-app-shell-responsive-layout: review
+  1-5-base-app-shell-responsive-layout: done
   epic-1-retrospective: optional
 
   epic-2: backlog
