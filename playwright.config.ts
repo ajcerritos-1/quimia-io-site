@@ -49,7 +49,14 @@ export default defineConfig({
     command: "npx tsx scripts/e2e/start-server.ts",
     url: BASE_URL,
     env: { E2E_PORT: PORT },
-    reuseExistingServer: false,
+    // Opt-in attach mode (2026-08-24 workaround): on this Windows dev
+    // machine, Playwright's own process spawn of `start-server.ts` hangs
+    // (see deferred-work.md "Windows Playwright hang"). Set
+    // E2E_REUSE_SERVER=1 to attach to a server you started manually with
+    // `npx tsx scripts/e2e/start-server.ts`. Normally false on purpose —
+    // a stray process on :3100 must NOT silently skip the fresh-branch
+    // harness (branch create + migrate + build) and produce stale results.
+    reuseExistingServer: process.env.E2E_REUSE_SERVER === "1",
     // Branch create + migrate deploy + provision-app-role + `next build`
     // + `next start`, all sequential, all before the URL becomes
     // reachable — generous headroom over the ~60-90s the equivalent
