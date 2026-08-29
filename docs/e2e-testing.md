@@ -25,8 +25,9 @@ Story 1.1's sign-in feature) is not the right tradeoff.
 
 ## What this batch does instead
 
-Playwright runs against a **local** `next dev` server, pointed at its own
-**ephemeral Neon branch** created specifically for the e2e run:
+Playwright runs against a **local** `next start` server (production build,
+see below), pointed at its own **ephemeral Neon branch** created
+specifically for the e2e run:
 
 - `playwright.config.ts` — `webServer.command` is
   `npx tsx scripts/e2e/start-server.ts`.
@@ -100,6 +101,29 @@ the Neon `DELETE` call. Those handlers are still installed as best-effort
 (they do fire on a normal `next dev` exit), but the scheduled cleanup job
 `docs/neon-branch-cleanup.md` describes is the authoritative safety net
 here — the same one already relied on for any other killed test run.
+
+### Windows stdio deadlock (hazard removed 2026-08-25)
+
+The Windows `npm run test:e2e` hang (see `_bmad-output/implementation-artifacts/
+deferred-work.md`) was a stdio-pipe-inheritance deadlock across the nested
+`npx`-in-`npx` chain: Playwright's webServer launcher spawns
+`start-server.ts` with a pipe for stdout/stderr, and every nested
+`execFileSync("npx", ...)` used `stdio: "inherit"`, so each child inherited
+the SAME outer pipe's write handle. Sharing one pipe's write handle across
+the chain is a known Windows pipe-inheritance hazard: when a child's output
+filled the pipe buffer (e.g. `next build` progress), the chain stalled and
+the run hung. Fix: `scripts/e2e/start-server.ts` runs every nested
+step through `runStep` (`spawnSync` with Node-owned pipes — Node always
+drains the child's output) and forwards the captured output to its own
+stdout/stderr, and the long-running `next start` uses pipes with continuous
+forwarding. `shell: true` remains for Windows `npx` shim resolution.
+
+This removes the inherited-pipe hazard class rather than proving a full
+green run: the hang itself was only ever reproducible through Playwright's
+own launcher, so the fix was committed on the mechanism analysis above
+plus a clean terminal-level run of the same steps. A full `npm run
+test:e2e` after this change is still pending verification (tracked with
+the deferred work).
 
 Tenant subdomains resolve the same way they do in local dev: navigating to
 `http://{lab}.localhost:3100/sign-in`. Chromium resolves any `*.localhost`

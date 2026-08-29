@@ -38,8 +38,18 @@
  * cleanup job `docs/neon-branch-cleanup.md` describes is the authoritative
  * safety net for whatever this best-effort path misses, exactly the same
  * safety net already relied on for any other killed test run.
+ *
+ * Windows stdio fix (2026-08-25): all nested `npx` steps (migrate, provision,
+ * build) run through `runStep` with Node-owned pipes, and `next start` pipes
+ * are drained by forwarding — never `stdio: "inherit"`. Sharing the outer
+ * Playwright pipe's write handle across the npx-in-npx chain is a known
+ * Windows pipe-inheritance hazard (see `createEphemeralBranch`'s comment).
  */
-import { execFileSync, spawn } from "node:child_process";
+import {
+  spawn,
+  spawnSync,
+  type SpawnSyncReturns,
+} from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { loadEnvConfig } from "@next/env";
@@ -59,6 +69,50 @@ const DATABASE_NAME = "neondb";
 interface EphemeralBranch {
   appDatabaseUrl: string;
   deleteBranch: () => Promise<void>;
+}
+
+/**
+ * Runs a one-shot `npx` step (migrate / provision / build) synchronously
+ * with Node-owned pipes. See the call-site comment in
+ * `createEphemeralBranch` for why `stdio: "inherit"` deadlocks on Windows.
+ * Captured stdout/stderr are forwarded to this process's own output so logs
+ * stay visible; a non-zero exit throws with the step name.
+ */
+function runStep(
+  label: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+): void {
+  let result: SpawnSyncReturns<string>;
+  try {
+    result = spawnSync("npx", args, {
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024, // `next build` output exceeds the 1MB default
+      env,
+    });
+  } catch (err) {
+    // Covers `ERR_CHILD_PROCESS_STDIO_MAXBUFFER` (spawnSync throws and the
+    // captured output is lost) plus any other synchronous spawn failure.
+    throw new Error(`${label} failed to spawn: ${(err as Error).message}`, {
+      cause: err,
+    });
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error) {
+    throw new Error(`${label} failed to spawn: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
+  if (result.status !== 0) {
+    const tail = `${result.stdout ?? ""}${result.stderr ?? ""}`.slice(-4096);
+    throw new Error(
+      `${label} failed (exit ${result.status ?? result.signal ?? "unknown"})` +
+        (tail ? `\n--- tail of captured output ---\n${tail}` : ""),
+    );
+  }
 }
 
 async function createEphemeralBranch(): Promise<EphemeralBranch> {
@@ -109,22 +163,27 @@ async function createEphemeralBranch(): Promise<EphemeralBranch> {
       database.name,
     );
 
-    // Same Windows `npx` ENOENT reason as `neon-global-setup.ts`.
-    const npxOptions = { shell: true, stdio: "inherit" as const };
-
-    execFileSync("npx", ["prisma", "migrate", "deploy"], {
-      ...npxOptions,
-      env: { ...process.env, DIRECT_DATABASE_URL: ownerDatabaseUrl },
+    // Windows stdio deadlock fix (2026-08-25): every nested `npx` call below
+    // previously used `stdio: "inherit"` — each child inherited the SAME
+    // stdout/stderr write handle Playwright's webServer launcher created for
+    // THIS script. Sharing one pipe's write handle across the npx-in-npx
+    // chain is a known Windows pipe-inheritance hazard: when a child's
+    // output filled the pipe buffer (e.g. `next build`'s progress), the
+    // whole chain stalled and the run hung (the documented Windows e2e
+    // hang, deferred-work.md). `runStep` uses `spawnSync` with Node-owned
+    // pipes instead: Node always drains the child's stdout/stderr, so a
+    // full buffer can never stall it. `shell: true` stays — same Windows
+    // `npx` ENOENT reason as `neon-global-setup.ts`.
+    runStep("prisma migrate deploy", ["prisma", "migrate", "deploy"], {
+      ...process.env,
+      DIRECT_DATABASE_URL: ownerDatabaseUrl,
     });
 
     const appPassword = randomUUID();
-    execFileSync("npx", ["tsx", "scripts/db/provision-app-role.ts"], {
-      ...npxOptions,
-      env: {
-        ...process.env,
-        DIRECT_DATABASE_URL: ownerDatabaseUrl,
-        APP_DB_PASSWORD: appPassword,
-      },
+    runStep("provision-app-role", ["tsx", "scripts/db/provision-app-role.ts"], {
+      ...process.env,
+      DIRECT_DATABASE_URL: ownerDatabaseUrl,
+      APP_DB_PASSWORD: appPassword,
     });
 
     const appDatabaseUrl = buildConnectionUri(
@@ -163,21 +222,22 @@ async function main(): Promise<void> {
   // is a deliberate deviation from `next dev`, not an oversight (see
   // `docs/e2e-testing.md`).
   try {
-    execFileSync("npx", ["next", "build"], {
-      shell: true,
-      stdio: "inherit",
-      env: runtimeEnv,
-    });
+    runStep("next build", ["next", "build"], runtimeEnv);
   } catch (err) {
     await deleteBranch();
     throw err;
   }
 
+  // Same pipe-drain pattern as `runStep`: forward the long-running server's
+  // output to this process's own stdout/stderr (so logs stay visible) while
+  // never blocking the server on a full pipe buffer.
   const child = spawn("npx", ["next", "start", "-p", port], {
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],
     shell: true,
     env: runtimeEnv,
   });
+  child.stdout?.on("data", (chunk) => process.stdout.write(chunk));
+  child.stderr?.on("data", (chunk) => process.stderr.write(chunk));
 
   let cleaningUp = false;
   const cleanup = async (exitCode: number) => {
@@ -191,6 +251,13 @@ async function main(): Promise<void> {
 
   child.on("exit", (code) => {
     void cleanup(code ?? 0);
+  });
+  // If spawn itself fails (npx shim missing, etc.) `exit` never fires — make
+  // sure the branch still gets cleaned up instead of lingering until
+  // Playwright's webServer timeout.
+  child.on("error", (err) => {
+    console.error("start-server: failed to spawn next start", err);
+    void cleanup(1);
   });
   process.on("SIGTERM", () => child.kill("SIGTERM"));
   process.on("SIGINT", () => child.kill("SIGINT"));
