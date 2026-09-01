@@ -21,6 +21,12 @@ import { defineConfig } from "@playwright/test";
  */
 const PORT = process.env.E2E_PORT ?? "3100";
 const BASE_URL = `http://localhost:${PORT}`;
+// Readiness/reuse probe. MUST be a URL that returns <404: the app's tenant
+// middleware 404s the bare root (`http://localhost:3100/`), and Playwright
+// treats a 404 as "server not ready" — which made both the spawned-server
+// wait (360s timeout) and the `E2E_REUSE_SERVER` attach gate (never reuses)
+// fail forever. `/sign-in` responds 200 regardless of tenant.
+const READY_URL = `http://localhost:${PORT}/sign-in`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -47,7 +53,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npx tsx scripts/e2e/start-server.ts",
-    url: BASE_URL,
+    url: READY_URL,
     env: { E2E_PORT: PORT },
     // Opt-in attach mode (2026-08-24 workaround): on this Windows dev
     // machine, Playwright's own process spawn of `start-server.ts` hangs
