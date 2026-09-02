@@ -1,10 +1,11 @@
 /**
  * The app shell (Story 1.5 Task 6, AC 1/2/4/5). A Next.js route group —
  * `(app)` adds no URL segment, so every route nested inside it keeps its
- * existing URL (`(app)/usuarios/page.tsx` still serves at `/usuarios`,
- * `(app)/page.tsx` still serves at `/`). This is the standard Next.js
- * pattern for one shared layout across several routes with no path segment
- * added — not a custom higher-order-component wrapper.
+ * URL (`(app)/usuarios/page.tsx` serves at `/usuarios`,
+ * `(app)/inicio/page.tsx` serves at `/inicio` — the shell home, moved from
+ * `/` when the public landing page took over the root route). This is the
+ * standard Next.js pattern for one shared layout across several routes
+ * with no path segment added — not a custom higher-order-component wrapper.
  *
  * Resolves the actor via `getCurrentActor()` — not `requireAdmin`/
  * `requireRole`, since the shell is shared across every role. Follows
@@ -22,7 +23,7 @@
  * two-state AC, not `EXPERIENCE.md`'s optional three-tier/icon-collapsed
  * tablet variant (out of scope, see this story's Dev Notes).
  *
- * This layout and any nested page (e.g. `(app)/page.tsx`) each
+ * This layout and any nested page (e.g. `(app)/inicio/page.tsx`) each
  * independently resolve the actor — Next.js Server Components don't pass
  * data from a layout down to its nested page via props (a layout only
  * receives `children`), so this is the established, correct pattern in this

@@ -12,8 +12,21 @@
  * style ships no `react-hook-form`-based `form` block (confirmed via the
  * shadcn CLI registry for the `base-nova` style), so validation is plain
  * Zod + React 19's `useActionState`, not `react-hook-form`.
+ *
+ * Post-sign-in redirect: on success the user lands on `/inicio` (the
+ * workspace), NOT on `/` (the public landing) — and not on this page's
+ * static success marker either. The redirect is deliberately CLIENT-side
+ * and effect-driven: `submitSignIn` keeps returning its plain `{ok:true}`
+ * shape (no server-side `redirect()` throw, no change to its contract),
+ * the success marker renders as the transient success signal, and a
+ * `useEffect` then navigates. Story 1.5's Dev Notes warned that an
+ * instant redirect racing the `sign-in-success` marker would make e2e
+ * assertions on that marker flaky — the tests were updated in the same
+ * change to assert the resulting URL (`/inicio`), which is deterministic,
+ * so no race remains.
  */
-import { useActionState } from "react";
+import { useEffect, useActionState } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +88,16 @@ export function SignInForm() {
     signInFormAction,
     initialState,
   );
+  const router = useRouter();
+
+  // Post-sign-in redirect: land on the workspace (`/inicio`) once the
+  // success state renders. Client-side by design (see the header comment) —
+  // the server action's contract is untouched, and the e2e suite asserts
+  // the resulting URL, never the transient success marker, so this
+  // navigation cannot race an assertion.
+  useEffect(() => {
+    if (state.ok) router.replace("/inicio");
+  }, [state.ok, router]);
 
   if (state.ok) {
     return (

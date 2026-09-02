@@ -21,11 +21,11 @@ import { defineConfig } from "@playwright/test";
  */
 const PORT = process.env.E2E_PORT ?? "3100";
 const BASE_URL = `http://localhost:${PORT}`;
-// Readiness/reuse probe. MUST be a URL that returns <404: the app's tenant
-// middleware 404s the bare root (`http://localhost:3100/`), and Playwright
-// treats a 404 as "server not ready" — which made both the spawned-server
-// wait (360s timeout) and the `E2E_REUSE_SERVER` attach gate (never reuses)
-// fail forever. `/sign-in` responds 200 regardless of tenant.
+// Readiness/reuse probe. MUST be a URL that returns <404: `/sign-in`
+// responds 200 regardless of tenant, so it is the stable probe. (The bare
+// root `http://localhost:3100/` used to 404 via the tenant middleware when
+// the shell home lived at `/`; the public landing page now serves it 200
+// for any host, but READY_URL stays on `/sign-in` — unchanged, deliberate.)
 const READY_URL = `http://localhost:${PORT}/sign-in`;
 
 export default defineConfig({

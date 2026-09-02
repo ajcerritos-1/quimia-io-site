@@ -35,7 +35,9 @@ async function signInViaUi(
   await page.getByLabel(/email or nickname/i).fill(email);
   await page.getByLabel(/password/i).fill(PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page.getByTestId("sign-in-success")).toBeVisible();
+  // The form redirects to the shell home on success — assert the resulting
+  // URL, not the transient `sign-in-success` marker (deterministic).
+  await expect(page).toHaveURL(/\/inicio$/);
 }
 
 test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {

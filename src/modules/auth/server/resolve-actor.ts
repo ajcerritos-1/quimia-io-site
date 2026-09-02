@@ -1,10 +1,11 @@
 /**
  * Shared authenticated-actor resolver (Story 1.5 code review, P3). Extracts
  * the ~15-line header-parsing + `getCurrentActor` + 401-redirect boilerplate
- * that `(app)/layout.tsx` (`resolveShellActor`) and `(app)/page.tsx`
- * (`resolveActor`) previously each duplicated verbatim. Both now import and
- * call THIS one function — one place to change if the redirect-on-401 /
- * unresolved-tenant behavior ever needs to evolve.
+ * that `(app)/layout.tsx` (`resolveShellActor`) and the shell home page
+ * `(app)/inicio/page.tsx` (moved from `(app)/page.tsx`) previously each
+ * duplicated verbatim. Both now import and call THIS one function — one
+ * place to change if the redirect-on-401 / unresolved-tenant behavior ever
+ * needs to evolve.
  *
  * The two call sites still call it independently (the layout and its nested
  * page each resolve the actor themselves — Next.js Server Components don't

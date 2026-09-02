@@ -1,14 +1,21 @@
 /**
- * Root landing page (Story 1.5 Task 8, AC 5). Replaces the create-next-app
- * placeholder, which is deleted entirely.
+ * Shell home page, served at `/inicio` (moved from `(app)/page.tsx`, which
+ * served `/`, when the new public landing page took over the root route).
+ * A pure filesystem move plus this header rewrite — the page's own logic
+ * (its `resolveActor()` call, the registry-driven shortcut visibility, and
+ * its rendered markup) is unchanged, and it stays protected and
+ * tenant-scoped exactly as before: `/inicio` still sits inside the `(app)`
+ * shell, so unauthenticated visitors are redirected to `/sign-in` by the
+ * shell layout before this page's own body would render.
  *
- * `/` is a role-agnostic authenticated placeholder, NOT a role-conditional
- * redirect to `/usuarios` — see this story's own Dev Notes for why: a
- * `recepcionista`/`quimico` has genuinely nowhere else to go yet (Epics 2-11
- * haven't shipped), so redirecting them to `/usuarios` would just trade the
- * old dead end for an immediate 404 (`requireAdmin()` still gates that page,
- * unchanged). Every authenticated role sees this same minimal, professional-
- * tone Spanish placeholder (`UX-DR22`/NFR-9's voice-and-tone standard).
+ * `/inicio` is a role-agnostic authenticated placeholder, NOT a
+ * role-conditional redirect to `/usuarios` — see Story 1.5's own Dev Notes
+ * for why: a `recepcionista`/`quimico` has genuinely nowhere else to go yet
+ * (Epics 2-11 haven't shipped), so redirecting them to `/usuarios` would
+ * just trade the old dead end for an immediate 404 (`requireAdmin()` still
+ * gates that page, unchanged). Every authenticated role sees this same
+ * minimal, professional-tone Spanish placeholder (`UX-DR22`/NFR-9's
+ * voice-and-tone standard).
  *
  * The "Ir a Usuarios" shortcut renders only when the signed-in role sees the
  * `/usuarios` nav item in the registry (`visibleNavItems(...)` — which is

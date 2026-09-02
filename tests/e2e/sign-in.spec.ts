@@ -34,7 +34,10 @@ test.describe("Sign-in — happy path (7.1)", () => {
     await page.getByLabel(/password/i).fill(PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
 
-    await expect(page.getByTestId("sign-in-success")).toBeVisible();
+    // Post-sign-in redirect: the form lands the user on the workspace
+    // (`/inicio`) instead of staying on the sign-in page's transient
+    // success marker — assert the resulting URL (deterministic).
+    await expect(page).toHaveURL(/\/inicio$/);
 
     // Confirms a REAL, browser-held session cookie was established — not
     // just a UI-level success message — by navigating (same browser

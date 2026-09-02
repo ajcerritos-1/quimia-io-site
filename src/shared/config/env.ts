@@ -29,6 +29,15 @@ const envSchema = z.object({
   // is exactly the P1010-style footgun this schema exists to prevent).
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
+  // Landing CTA sign-in target (public landing at `/`). Optional: when unset,
+  // the landing falls back to the relative `/sign-in`, which is correct for
+  // local dev and the e2e suite. On a deployed preview/production, set it to
+  // the client's tenant host (e.g. https://liticc.dev.quimiaio.com/sign-in)
+  // because the bare-root `/sign-in` can never complete a sign-in (no tenant
+  // slug on the apex host). Server-only: the landing is a Server Component,
+  // so this must NOT be a NEXT_PUBLIC_ var (that prefix would ship the value
+  // to the browser).
+  SIGN_IN_URL: z.url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
