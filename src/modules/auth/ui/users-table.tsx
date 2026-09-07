@@ -30,10 +30,30 @@
  * (Task 4) — an admin can never change their own role or deactivate their
  * own account (Story 1.2 AC 5/6), and this closes the gap where that rule
  * was enforced only server-side.
+ *
+ * (2026-09-06 UI polish, Epic 2 pattern seed) Table restyled for the
+ * client demo on the shared catalog primitives: wrapped in a `Card` with a
+ * count header, thead band + row hover, `StatusBadge` pills for
+ * Activo/Inactivo, the shared `Select` primitive for the per-row role
+ * control (STILL a native `<select>` — e2e drives it with `selectOption`),
+ * `Button` ghost actions, and an empty state when the tenant has no users.
+ * `UserRow`, `ROLE_LABELS`, the three action handlers, and the
+ * `DisabledHint` self-row semantics are contract-unchanged.
  */
 import { useTransition } from "react";
+import { Users } from "lucide-react";
 import type { UserRole } from "@/shared/db";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DisabledHint } from "@/components/ui/disabled-hint";
+import { Select } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { submitDeactivateUser } from "../server/submit-deactivate-user.action";
 import { submitReactivateUser } from "../server/submit-reactivate-user.action";
 import { submitUpdateUserRole } from "../server/submit-update-user-role.action";
@@ -88,92 +108,143 @@ export function UsersTable({
   }
 
   return (
-    <table className="w-full text-left text-sm">
-      <thead>
-        <tr className="border-b border-border text-muted-foreground">
-          <th className="py-2 pr-4 font-medium">Nombre</th>
-          <th className="py-2 pr-4 font-medium">Nickname / Email</th>
-          <th className="py-2 pr-4 font-medium">Rol</th>
-          <th className="py-2 pr-4 font-medium">Estado</th>
-          <th className="py-2 pr-4 font-medium">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {users.map((user) => {
-          const isOwnRow = user.id === viewerUserId;
-          return (
-            <tr key={user.id} className="border-b border-border">
-              <td className="py-2 pr-4">{user.name}</td>
-              <td className="py-2 pr-4">
-                {user.nickname} / {user.email}
-              </td>
-              <td className="py-2 pr-4">
-                <DisabledHint
-                  disabled={isOwnRow}
-                  reason="No puedes cambiar tu propio rol."
-                >
-                  <select
-                    aria-label={`Rol de ${user.nickname}`}
-                    defaultValue={user.role}
-                    disabled={isPending || !user.isActive}
-                    onChange={(event) =>
-                      handleRoleChange(user.id, event.target.value)
-                    }
-                    className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm disabled:opacity-50"
-                  >
-                    {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </DisabledHint>
-              </td>
-              <td className="py-2 pr-4">{user.isActive ? "Activo" : "Inactivo"}</td>
-              <td className="py-2 pr-4">
-                {user.isActive ? (
-                  <DisabledHint
-                    disabled={isOwnRow}
-                    reason="No puedes desactivar tu propia cuenta."
-                  >
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => handleDeactivate(user.id)}
-                      className="rounded-lg border border-destructive/40 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+    <Card>
+      <CardHeader>
+        <CardTitle>Usuarios registrados</CardTitle>
+        <CardDescription>
+          {users.length}{" "}
+          {users.length === 1 ? "usuario" : "usuarios"} con acceso al
+          laboratorio.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-0">
+        {users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-1.5 px-6 py-14 text-center">
+            <Users aria-hidden="true" className="size-8 text-muted-foreground/50" />
+            <p className="text-sm font-medium">No hay usuarios todavía</p>
+            <p className="text-sm text-muted-foreground">
+              Crea el primer usuario con el botón &quot;Crear usuario&quot;.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-6 py-3 pr-4 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Nombre
+                  </th>
+                  <th className="px-6 py-3 pr-4 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 pr-4 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Rol
+                  </th>
+                  <th className="px-6 py-3 pr-4 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wide text-muted-foreground uppercase text-right">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const isOwnRow = user.id === viewerUserId;
+                  return (
+                    <tr
+                      key={user.id}
+                      className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/50"
                     >
-                      Desactivar
-                    </button>
-                  </DisabledHint>
-                ) : (
-                  // This branch is structurally unreachable for the viewer's
-                  // own row in practice: a deactivated actor is rejected by
-                  // `getCurrentActor()`'s `isActive` re-check before ever
-                  // reaching this page (Story 1.2 Task 9 dev note). Story
-                  // 1.3 Task 5 originally left this button undecorated on
-                  // that basis; Review Findings patch 2026-08-17 wraps it in
-                  // `DisabledHint` anyway — free defense-in-depth now that
-                  // the primitive exists, in case that invariant ever stops
-                  // holding.
-                  <DisabledHint
-                    disabled={isOwnRow}
-                    reason="No puedes reactivar tu propia cuenta."
-                  >
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => handleReactivate(user.id)}
-                      className="rounded-lg border border-input px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                    >
-                      Reactivar
-                    </button>
-                  </DisabledHint>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                      <td className="px-6 py-3.5 pr-4">
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.nickname}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 pr-4 text-muted-foreground">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-3.5 pr-4">
+                        <DisabledHint
+                          disabled={isOwnRow}
+                          reason="No puedes cambiar tu propio rol."
+                        >
+                          <Select
+                            aria-label={`Rol de ${user.nickname}`}
+                            defaultValue={user.role}
+                            disabled={isPending || !user.isActive}
+                            onChange={(event) =>
+                              handleRoleChange(user.id, event.target.value)
+                            }
+                            className="w-auto min-w-32"
+                          >
+                            {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </Select>
+                        </DisabledHint>
+                      </td>
+                      <td className="px-6 py-3.5 pr-4">
+                        <StatusBadge
+                          variant={user.isActive ? "success" : "neutral"}
+                        >
+                          {user.isActive ? "Activo" : "Inactivo"}
+                        </StatusBadge>
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        {user.isActive ? (
+                          <DisabledHint
+                            disabled={isOwnRow}
+                            reason="No puedes desactivar tu propia cuenta."
+                          >
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() => handleDeactivate(user.id)}
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              Desactivar
+                            </Button>
+                          </DisabledHint>
+                        ) : (
+                          // This branch is structurally unreachable for the viewer's
+                          // own row in practice: a deactivated actor is rejected by
+                          // `getCurrentActor()`'s `isActive` re-check before ever
+                          // reaching this page (Story 1.2 Task 9 dev note). Story
+                          // 1.3 Task 5 originally left this button undecorated on
+                          // that basis; Review Findings patch 2026-08-17 wraps it in
+                          // `DisabledHint` anyway — free defense-in-depth now that
+                          // the primitive exists, in case that invariant ever stops
+                          // holding.
+                          <DisabledHint
+                            disabled={isOwnRow}
+                            reason="No puedes reactivar tu propia cuenta."
+                          >
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() => handleReactivate(user.id)}
+                            >
+                              Reactivar
+                            </Button>
+                          </DisabledHint>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

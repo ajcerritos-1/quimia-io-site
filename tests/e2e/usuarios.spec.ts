@@ -53,7 +53,12 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     await signInViaUi(page, tenant.slug, admin.email);
     await page.goto(tenantUrl(tenant.slug, "/usuarios"));
 
-    await expect(page.getByRole("heading", { name: /usuarios/i })).toBeVisible();
+    // `level: 1` keeps this unambiguous: the card's section heading
+    // ("Usuarios registrados") is an h2, and an unscoped heading query
+    // would strict-mode-fail against the h1 + h2 pair (2026-09-06 review).
+    await expect(
+      page.getByRole("heading", { name: /usuarios/i, level: 1 }),
+    ).toBeVisible();
     await expect(page.getByText(admin.nickname)).toBeVisible();
 
     // Self-action guard (Story 1.3 AC 6): the signed-in admin's OWN row
@@ -80,16 +85,26 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
       "No puedes desactivar tu propia cuenta.",
     );
 
-    // Create a new user.
+    // Create a new user. The create form lives in a modal dialog
+    // (2026-09-06 UI polish): open it first, then scope every field and
+    // button interaction to the dialog — the page header trigger and the
+    // dialog's submit button share the "Crear usuario" label, so an
+    // unscoped query would hit a strict-mode duplicate.
     const newEmail = `nuevo-${Date.now()}@example.com`;
     const newNickname = `nuevo${Date.now()}`;
-    await page.getByLabel(/^nombre$/i).fill("Usuario Nuevo");
-    await page.getByLabel(/nickname/i).fill(newNickname);
-    await page.getByLabel(/^email$/i).fill(newEmail);
-    await page.getByLabel(/contraseña inicial/i).fill("Otra-Password-Segura-1!");
-    await page.getByLabel(/^rol$/i).selectOption("quimico");
     await page.getByRole("button", { name: /crear usuario/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel(/^nombre$/i).fill("Usuario Nuevo");
+    await dialog.getByLabel(/nickname/i).fill(newNickname);
+    await dialog.getByLabel(/^email$/i).fill(newEmail);
+    await dialog.getByLabel(/contraseña inicial/i).fill("Otra-Password-Segura-1!");
+    await dialog.getByLabel(/^rol$/i).selectOption("quimico");
+    await dialog.getByRole("button", { name: /crear usuario/i }).click();
 
+    // The dialog auto-closes on success; the revalidated table showing the
+    // new user is the success feedback.
+    await expect(dialog).not.toBeVisible();
     await expect(page.getByText(newNickname)).toBeVisible();
 
     // Edit the new user's role.
@@ -103,6 +118,33 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     await row.getByRole("button", { name: /desactivar/i }).click();
     await expect(row.getByText(/inactivo/i)).toBeVisible();
     await expect(row.getByRole("button", { name: /desactivar/i })).toHaveCount(0);
+  });
+
+  test("Cancelar closes the create-user dialog without creating a user (2026-09-06 review)", async ({
+    page,
+  }) => {
+    const { tenant, admin } = await withOwnerClient(async (client) => {
+      const tenant = await seedTenant(client);
+      const admin = await seedUser(client, tenant.tenantId, PASSWORD, "admin");
+      return { tenant, admin };
+    });
+
+    await signInViaUi(page, tenant.slug, admin.email);
+    await page.goto(tenantUrl(tenant.slug, "/usuarios"));
+
+    // Open the dialog, fill the first field with a marker value, then
+    // Cancelar — the dialog must close and no row for the marker may ever
+    // appear (the Cancelar path must not submit anything).
+    await page.getByRole("button", { name: /crear usuario/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel(/^nombre$/i).fill("Usuario Descartado");
+    await dialog.getByRole("button", { name: /cancelar/i }).click();
+
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByText("Usuario Descartado")).toHaveCount(0);
+    // The pre-existing row (the seeded admin) is untouched.
+    await expect(page.getByText(admin.nickname)).toBeVisible();
   });
 
   test("create-user form renders the specific password-policy message inline for a client-side rejection (Review Findings patch)", async ({
@@ -127,12 +169,20 @@ test.describe("Usuarios admin UI (Task 7, AC 1/2/3)", () => {
     // after a rejected submission rather than relying on values surviving
     // across submits.
     async function fillAndSubmit(password: string): Promise<void> {
-      await page.getByLabel(/^nombre$/i).fill("Usuario Nuevo");
-      await page.getByLabel(/nickname/i).fill(newNickname);
-      await page.getByLabel(/^email$/i).fill(newEmail);
-      await page.getByLabel(/^rol$/i).selectOption("quimico");
-      await page.getByLabel(/contraseña inicial/i).fill(password);
-      await page.getByRole("button", { name: /crear usuario/i }).click();
+      // The form lives in a modal dialog that auto-closes on success —
+      // re-open it after a successful attempt (validation failures keep it
+      // open, so the reopen is skipped on the next attempt).
+      const dialog = page.getByRole("dialog");
+      if (!(await dialog.isVisible())) {
+        await page.getByRole("button", { name: /crear usuario/i }).click();
+        await expect(dialog).toBeVisible();
+      }
+      await dialog.getByLabel(/^nombre$/i).fill("Usuario Nuevo");
+      await dialog.getByLabel(/nickname/i).fill(newNickname);
+      await dialog.getByLabel(/^email$/i).fill(newEmail);
+      await dialog.getByLabel(/^rol$/i).selectOption("quimico");
+      await dialog.getByLabel(/contraseña inicial/i).fill(password);
+      await dialog.getByRole("button", { name: /crear usuario/i }).click();
     }
 
     // 8 chars, hits all 4 character classes but fails the 12-char minimum —

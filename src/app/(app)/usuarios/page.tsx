@@ -7,6 +7,13 @@
  * was touched. Gated by `requireAdmin()` at the page level: an
  * unauthenticated visitor is redirected to sign in; a non-admin gets a 404
  * (do not reveal the route exists to a caller who isn't allowed to use it).
+ *
+ * (2026-09-06 UI polish, Epic 2 pattern seed) Layout refactored onto the
+ * shared catalog primitives: `PageHeader` (title + description + actions)
+ * with the create-user flow moved into the `CreateUserDialog` modal (its
+ * trigger button lives in the header actions), and `UsersTable` wrapped in
+ * a `Card`. Server logic, the `requireAdmin()` gate, and `loadUsers()`
+ * are untouched — UI only.
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
@@ -16,7 +23,8 @@ import { UNRESOLVED_TENANT } from "@/middleware";
 import { scoped } from "@/shared/db";
 import { AppError } from "@/shared/http/errors";
 import { requireAdmin } from "@/modules/auth/server/require-admin";
-import { CreateUserForm } from "@/modules/auth/ui/create-user-form";
+import { PageHeader } from "@/components/ui/page-header";
+import { CreateUserDialog } from "@/modules/auth/ui/create-user-dialog";
 import { UsersTable, type UserRow } from "@/modules/auth/ui/users-table";
 
 interface LoadUsersResult {
@@ -65,14 +73,11 @@ export default async function UsuariosPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-8">
-      <div>
-        <h1 className="text-xl font-semibold">Usuarios</h1>
-        <p className="text-sm text-muted-foreground">
-          Administra los usuarios y sus roles de acceso.
-        </p>
-      </div>
-
-      <CreateUserForm />
+      <PageHeader
+        title="Usuarios"
+        description="Administra los usuarios y sus roles de acceso."
+        actions={<CreateUserDialog />}
+      />
 
       <UsersTable users={users} viewerUserId={viewerUserId} />
     </div>

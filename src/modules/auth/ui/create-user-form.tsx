@@ -23,8 +23,19 @@
  * client-side check) — a server-side rejection of a policy-violating
  * password now maps back to this field's own error display via
  * `submitCreateUser`'s `fieldErrors`, not just a generic top-level banner.
+ *
+ * (2026-09-06 UI polish, Epic 2 pattern seed) The form now renders inside
+ * a modal dialog (`CreateUserDialog` hosts it; the page no longer embeds
+ * it inline). All validation/state behavior is preserved; two NEW OPTIONAL
+ * props wire the dialog lifecycle without touching the action contract:
+ * `onSuccess` auto-closes the dialog after a successful creation (the
+ * page refreshes via the action's `revalidatePath`, so the visible
+ * success feedback is the new row in the table), and `onCancel` renders
+ * a Cancelar button beside the submit. The raw `<select>` role field
+ * moved to the shared `Select` primitive (`src/components/ui/select.tsx`)
+ * — still a native `<select>`, so e2e `selectOption` keeps working.
  */
-import { useActionState } from "react";
+import { useEffect, useActionState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +46,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import type { UserRole } from "@/shared/db";
 import { ALL_ROLES } from "@/modules/auth/roles";
 import { passwordPolicySchema } from "../server/password-policy";
@@ -126,14 +138,41 @@ async function createUserFormAction(
   };
 }
 
-export function CreateUserForm() {
+export interface CreateUserFormProps {
+  /** Ref to the first field's input (Nombre). The hosting dialog passes the
+   * same ref it gives `ModalDialog`'s `initialFocus`, so keyboard users
+   * land on the first field when the dialog opens (Epic 2 form-dialog
+   * pattern). */
+  firstFieldRef?: React.RefObject<HTMLInputElement | null>;
+  /** Called when the creation succeeds — the hosting dialog uses this to
+   * auto-close (the revalidated page showing the new row is the success
+   * feedback). */
+  onSuccess?: () => void;
+  /** When provided, renders a "Cancelar" button beside the submit that
+   * invokes it (the hosting dialog closes itself). */
+  onCancel?: () => void;
+}
+
+export function CreateUserForm({
+  firstFieldRef,
+  onSuccess,
+  onCancel,
+}: CreateUserFormProps) {
   const [state, formAction, isPending] = useActionState(
     createUserFormAction,
     initialState,
   );
 
+  // Auto-close the hosting dialog on success. Validation failures keep the
+  // dialog open with field errors; the dialog remounts the form fresh
+  // (initialState, ok: false) on every open, so this fires at most once
+  // per successful submission.
+  useEffect(() => {
+    if (state.ok) onSuccess?.();
+  }, [state.ok, onSuccess]);
+
   return (
-    <form action={formAction} noValidate className="max-w-md">
+    <form action={formAction} noValidate>
       <FieldGroup>
         <Field data-invalid={Boolean(state.fieldErrors.name)}>
           <FieldLabel htmlFor="name">Nombre</FieldLabel>
@@ -142,6 +181,7 @@ export function CreateUserForm() {
               id="name"
               name="name"
               type="text"
+              ref={firstFieldRef}
               aria-invalid={Boolean(state.fieldErrors.name)}
             />
             <FieldError>{state.fieldErrors.name}</FieldError>
@@ -190,19 +230,18 @@ export function CreateUserForm() {
         <Field data-invalid={Boolean(state.fieldErrors.role)}>
           <FieldLabel htmlFor="role">Rol</FieldLabel>
           <FieldContent>
-            <select
+            <Select
               id="role"
               name="role"
               defaultValue={DEFAULT_ROLE}
               aria-invalid={Boolean(state.fieldErrors.role)}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
             >
               {Object.entries(ROLE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
             <FieldError>{state.fieldErrors.role}</FieldError>
           </FieldContent>
         </Field>
@@ -216,9 +255,21 @@ export function CreateUserForm() {
           </p>
         ) : null}
 
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Creando..." : "Crear usuario"}
-        </Button>
+        <div className="mt-2 flex justify-end gap-2">
+          {onCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Creando..." : "Crear usuario"}
+          </Button>
+        </div>
       </FieldGroup>
     </form>
   );

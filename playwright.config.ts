@@ -41,11 +41,27 @@ export default defineConfig({
   // connection — the same cold-start latency PR 4a's own `scoped.ts`
   // widened `$transaction`'s `maxWait`/`timeout` for (see that file's own
   // comment).
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
+  // Test-level timeout widened 30s → 60s (2026-09-06, e2e gate evidence):
+  // the binding wall on a cold Neon pool is the Server-Action promise never
+  // settling within the test timeout — the shared sign-in/role-change
+  // actions intermittently stall past 30s while Neon cold-starts its pool.
+  // `expect.timeout` (25s) absorbs assertion latency; 60s absorbs the
+  // action-level stall without masking real regressions (a hung action
+  // still fails deterministically at 60s).
+  timeout: 60_000,
+  // Widened from 10s (2026-09-06): the sign-in chain (middleware tenant
+  // resolution + sign-in Server Action re-resolution + scoped-tx lookup +
+  // Better Auth queries) against a freshly-created, freshly-pooled Neon
+  // branch intermittently exceeds 10s on cold start — proven by e2e runs
+  // where `toHaveURL(/\/inicio$/)` resolved ~200ms after the window closed.
+  // 25s absorbs the cold-start spike without masking real regressions.
+  expect: { timeout: 25_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // Future-proof gate (2026-09-06 review): a committed `test.only` must
+  // never pass CI silently — Playwright errors on it whenever CI is set.
+  forbidOnly: !!process.env.CI,
   reporter: "list",
   use: {
     baseURL: BASE_URL,
