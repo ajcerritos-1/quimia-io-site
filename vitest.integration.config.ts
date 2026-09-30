@@ -31,10 +31,13 @@ export default defineConfig({
     globalSetup: ["tests/setup/neon-global-setup.ts"],
     setupFiles: ["tests/setup/env.ts"],
     // Branch creation + migrate deploy + provisioning is a real network
-    // round-trip to Neon's control plane; give it more room than the 10s
-    // unit-test default before Vitest reports a hang.
-    testTimeout: 30_000,
-    hookTimeout: 60_000,
+    // round-trip to Neon's control plane. Each test also drives a real
+    // `auth.api.signInEmail` against that branch (password hashing + a
+    // session-row write), which on a freshly-pooled free-tier branch can
+    // take 10-15s on cold start — so the per-test budget is far above the
+    // 10s unit-test default to avoid false "timed out in 30000ms" hangs.
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
     // Every file that imports `src/shared/db` builds its OWN PrismaClient
     // (and therefore its OWN pg connection pool) — Vitest isolates modules
     // per test file. All files share the SAME single ephemeral branch (D9:
