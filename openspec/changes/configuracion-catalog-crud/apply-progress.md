@@ -6,7 +6,7 @@ Strict TDD (RED → GREEN → REFACTOR) — resolved from `openspec/config.yaml`
 
 ## Slice Boundary
 
-PR 2 (auto-chain, work-unit 2 of 5) — **Phase 2 only**: `require-catalog-admin.ts` + `catalog-queries.ts` + 4 plain actions + integration tests. No submit wrappers (PR 3), no UI (PR 4), no routes/nav/e2e (PR 5).
+PR 3 (auto-chain, work-unit 3 of 5) — **Phase 3 only**: the four `"use server"` submit wrappers (thin FormData→input glue). Phases 1–2 (PR 1 + PR 2) are complete and preserved below. No UI (PR 4), no routes/nav/e2e (PR 5).
 
 ---
 
@@ -90,11 +90,49 @@ PR 2 (auto-chain, work-unit 2 of 5) — **Phase 2 only**: `require-catalog-admin
 | Runtime harness command/scenario and exact result | Real ephemeral Neon branch created off the parent, `prisma migrate deploy` → "No pending migrations to apply", `provision-app-role.ts` minted a fresh `quimia_app` password, all 17 tests drove real Prisma/RLS/audit paths |
 | Rollback boundary | Delete `src/modules/catalog/server/` (`require-catalog-admin.ts`, `catalog-queries.ts`, `create-catalog.action.ts`, `update-catalog.action.ts`, `deactivate-catalog.action.ts`, `reactivate-catalog.action.ts`) + `tests/integration/catalog/catalog-crud.test.ts` — registry/schemas (PR 1) remain and their tests still pass |
 
+---
+
+## Phase 3 (PR 3 — this slice: implemented AND verified GREEN)
+
+### Completed Tasks (Phase 3)
+
+- [x] 3.1 GREEN — `src/modules/catalog/server/submit-create-catalog.action.ts` (file-level `"use server"`; `submitCreateCatalog(formData): Promise<SubmitCatalogResult>`; headers() → `tenantId`/`requestId` with `UNRESOLVED_TENANT` guard; FormData → `CreateCatalogInput` mapping with `calibrationDate` `""`→`null` and `model`/`serialNumber` only for `kind === "equipos"`; `AppError` → `{ ok, message, fieldErrors }`; double `revalidatePath` after success).
+- [x] 3.2 GREEN — `src/modules/catalog/server/submit-update-catalog.action.ts` (`submitUpdateCatalog`; same mapping + `id` from a hidden input; calls `updateCatalog`).
+- [x] 3.3 GREEN — `src/modules/catalog/server/submit-deactivate-catalog.action.ts` (`submitDeactivateCatalog`; maps hidden `{ kind, id }` → `CatalogIdInput`; calls `deactivateCatalog`).
+- [x] 3.4 GREEN — `src/modules/catalog/server/submit-reactivate-catalog.action.ts` (`submitReactivateCatalog`; maps hidden `{ kind, id }`; calls `reactivateCatalog`).
+- [x] 3.5 Verify — `npx tsc --noEmit` exit 0; `npx next build` exit 0 (Turbopack, "Compiled successfully in 16.7s", 7/7 static pages) with NO Prisma/`pg`-in-client error.
+
+### TDD Cycle Evidence (Phase 3)
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 3.1 | — (no unit-test boundary) | Server Action glue (`"use server"`) | Phase 2 integration 17/17 + Phase 1 unit 18/18 | — (no isolated unit boundary for file-level glue — NOT a test-first RED; prescribed verification is tsc + next build; wrapper exercised end-to-end by PR 5's e2e) | ✅ `npx tsc --noEmit` exit 0 (FormData→input mapping + AppError→result translation type-checked) | — (mapping cases: equipos full set incl. `""`→null, uniform kinds name-only — covered by tsc narrowing) | ✅ Clean |
+| 3.2 | — (no unit-test boundary) | Server Action glue (`"use server"`) | Phase 2 integration 17/17 + Phase 1 unit 18/18 | — (same glue note as 3.1) | ✅ `npx tsc --noEmit` exit 0 | — (hidden `id` mapping + equipos superset) | ✅ Clean |
+| 3.3 | — (no unit-test boundary) | Server Action glue (`"use server"`) | Phase 2 integration 17/17 + Phase 1 unit 18/18 | — (same glue note as 3.1) | ✅ `npx tsc --noEmit` exit 0 | — (`{ kind, id }` → `CatalogIdInput`) | ✅ Clean |
+| 3.4 | — (no unit-test boundary) | Server Action glue (`"use server"`) | Phase 2 integration 17/17 + Phase 1 unit 18/18 | — (same glue note as 3.1) | ✅ `npx tsc --noEmit` exit 0 | — (mirror of 3.3) | ✅ Clean |
+| 3.5 | — (static/build gate) | Build | — | — | ✅ `npx tsc --noEmit` exit 0; `npx next build` exit 0 — no Turbopack error from Prisma/`pg` leaking into the client bundle (the reason these live in their own `"use server"` files) | — | ✅ Grep: wrappers import only next/headers, next/cache, middleware const, shared errors, registry, schemas, and the plain action |
+
+### Test Summary (Phase 3)
+
+- **Total tests written**: 0 (no unit-test boundary for file-level glue — see evidence note)
+- **Total tests passing**: N/A (static/build verification instead) — Phase 1 unit 18/18 + Phase 2 integration 17/17 remain the behavioral safety net, untouched by this slice
+- **Layers used**: Static type-check (`tsc --noEmit`) + production build (`next build`), per tasks.md 3.5 and the design's Testing Strategy
+- **Approval tests** (refactoring): None — all new files
+- **Pure functions created**: 0 new (per-wrapper `calibrationDateOrNull` normalization is a private 1-liner; `catalogHref` reused from Phase 1)
+
+### Work Unit Evidence (Phase 3)
+
+| Evidence | Required value |
+|---|---|
+| Focused test command and exact result | `npx tsc --noEmit` → exit 0 (clean, ~0 output). `npx next build` → exit 0: `✓ Compiled successfully in 16.7s`, `Finished TypeScript in 25.5s`, `✓ Generating static pages ... (7/7) in 2.7s`. No Turbopack/Prisma-`pg`-in-client error. |
+| Runtime harness command/scenario and exact result | `N/A` — no client consumer exists until PR 4 mounts the form; the wrappers are exercised end-to-end by PR 5's e2e (`tests/e2e/configuracion.spec.ts`), per tasks.md Work Unit 3 row. |
+| Rollback boundary | Delete the 4 `submit-*.action.ts` files (`submit-create-catalog`, `submit-update-catalog`, `submit-deactivate-catalog`, `submit-reactivate-catalog`) — plain actions (PR 2) remain intact and still tested |
+
 ## Cumulative State
 
 - Phase 1: 5/5 complete
 - Phase 2: 8/8 complete (verified GREEN)
-- Phase 3: 0/5
+- Phase 3: 5/5 complete (verified GREEN)
 - Phase 4: 0/5
 - Phase 5: 0/7
 
@@ -129,3 +167,10 @@ Getting to GREEN surfaced four defects in the as-written RED test file (which ha
 - **Test harness session shape**: `signIn(email, tenantId)` signs in once per role in `beforeAll` and shares the resulting cookie headers; tests isolate via unique names rather than unique tenants, to stay inside the free-tier connection budget.
 - **No new migrations, no schema changes on the repo side** — Phase 2 is server code + tests only. (The only DB change was the authorized production-branch remediation above.)
 - `npx tsc --noEmit` is clean (the previously-noted stale `.next/types/validator.ts` error did not resurface).
+
+## Phase 3 Notes / Deviations
+
+- **`SubmitCatalogResult` ownership**: the design's Interfaces section lists a single shared `SubmitCatalogResult` type and its File Changes table lists no extra file for it — it is defined once and exported from `submit-create-catalog.action.ts`, then type-only-imported by the other three wrappers. Mirrors Phase 2's `catalogIdSchema` single-ownership precedent (deactivate → reactivate import). No circular import (type-only, erased at compile).
+- **Uniform `AppError` → `{ ok, message, fieldErrors }` translation in all four wrappers** (not just create/update): the design's submit-wrapper contract and the Phase 3 task text both describe the shared `SubmitCatalogResult` shape, so deactivate/reactivate translate fieldErrors too (harmless for hidden `{ kind, id }` inputs, keeps the client result shape identical across all four actions).
+- **`calibrationDate` normalization lives in each create/update wrapper** as a private 1-line `calibrationDateOrNull` (`""`/missing → `null`, else raw `"yyyy-MM-dd"` string; the shared schema coerces to `Date`) — matches the design's "preprocess at the FormData boundary (client + submit wrapper)" and the Phase 2 integration evidence that the plain actions accept both `null` and `"2026-05-20"`-style strings.
+- **No new migrations, no schema changes, no UI/routes/e2e** — Phase 3 is four `"use server"` glue files only.

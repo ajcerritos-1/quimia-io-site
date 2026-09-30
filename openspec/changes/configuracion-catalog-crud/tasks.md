@@ -59,11 +59,11 @@ Server-only (`import "server-only"`). TDD: integration test written RED first, t
 
 Thin file-level `"use server"` glue. Each wrapper: resolves `headers()` → `tenantId` (guard `UNRESOLVED_TENANT`) + `requestId`, maps `FormData` → input (normalizing `calibrationDate` `""` → `null`), catches `AppError` → `{ ok, message, fieldErrors }`, then calls `revalidatePath("/configuracion")` AND `revalidatePath(catalogHref(kind))` after success. Mirrors `src/modules/auth/server/submit-create-user.action.ts` (read-only).
 
-- [ ] 3.1 Create `src/modules/catalog/server/submit-create-catalog.action.ts` exporting `submitCreateCatalog(formData: FormData): Promise<SubmitCatalogResult>` — maps `kind`, `name` (+ `model`/`serialNumber`/`calibrationDate` for `equipos`) from `FormData`, calls `createCatalog`, translates `AppError` fieldErrors, double `revalidatePath`.
-- [ ] 3.2 Create `src/modules/catalog/server/submit-update-catalog.action.ts` exporting `submitUpdateCatalog(formData)` — same mapping plus `id` from a hidden input; calls `updateCatalog`.
-- [ ] 3.3 Create `src/modules/catalog/server/submit-deactivate-catalog.action.ts` exporting `submitDeactivateCatalog(formData)` — maps `{ kind, id }`; calls `deactivateCatalog`.
-- [ ] 3.4 Create `src/modules/catalog/server/submit-reactivate-catalog.action.ts` exporting `submitReactivateCatalog(formData)` — maps `{ kind, id }`; calls `reactivateCatalog`.
-- [ ] 3.5 Verify — `npx tsc --noEmit` green; `npx next build` succeeds with no Turbopack error from Prisma/`pg` leaking into the client bundle (the reason these live in their own `"use server"` files).
+- [x] 3.1 Create `src/modules/catalog/server/submit-create-catalog.action.ts` exporting `submitCreateCatalog(formData: FormData): Promise<SubmitCatalogResult>` — maps `kind`, `name` (+ `model`/`serialNumber`/`calibrationDate` for `equipos`) from `FormData`, calls `createCatalog`, translates `AppError` fieldErrors, double `revalidatePath`.
+- [x] 3.2 Create `src/modules/catalog/server/submit-update-catalog.action.ts` exporting `submitUpdateCatalog(formData)` — same mapping plus `id` from a hidden input; calls `updateCatalog`.
+- [x] 3.3 Create `src/modules/catalog/server/submit-deactivate-catalog.action.ts` exporting `submitDeactivateCatalog(formData)` — maps `{ kind, id }`; calls `deactivateCatalog`.
+- [x] 3.4 Create `src/modules/catalog/server/submit-reactivate-catalog.action.ts` exporting `submitReactivateCatalog(formData)` — maps `{ kind, id }`; calls `reactivateCatalog`.
+- [x] 3.5 Verify — `npx tsc --noEmit` green; `npx next build` succeeds with no Turbopack error from Prisma/`pg` leaking into the client bundle (the reason these live in their own `"use server"` files).
 
 ## Phase 4: UI — Form, Dialogs, Table (PR 4)
 
