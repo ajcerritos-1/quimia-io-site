@@ -6,7 +6,7 @@ Strict TDD (RED → GREEN → REFACTOR) — resolved from `openspec/config.yaml`
 
 ## Slice Boundary
 
-PR 3 (auto-chain, work-unit 3 of 5) — **Phase 3 only**: the four `"use server"` submit wrappers (thin FormData→input glue). Phases 1–2 (PR 1 + PR 2) are complete and preserved below. No UI (PR 4), no routes/nav/e2e (PR 5).
+PR 4 (auto-chain, work-unit 4 of 5) — **Phase 4 only**: the four `src/modules/catalog/ui/` client components (generic form + create/edit dialogs + table). Phases 1–3 (PR 1 + PR 2 + PR 3) are complete and preserved below. No routes/nav/e2e (PR 5).
 
 ---
 
@@ -128,12 +128,50 @@ PR 3 (auto-chain, work-unit 3 of 5) — **Phase 3 only**: the four `"use server"
 | Runtime harness command/scenario and exact result | `N/A` — no client consumer exists until PR 4 mounts the form; the wrappers are exercised end-to-end by PR 5's e2e (`tests/e2e/configuracion.spec.ts`), per tasks.md Work Unit 3 row. |
 | Rollback boundary | Delete the 4 `submit-*.action.ts` files (`submit-create-catalog`, `submit-update-catalog`, `submit-deactivate-catalog`, `submit-reactivate-catalog`) — plain actions (PR 2) remain intact and still tested |
 
+---
+
+## Phase 4 (PR 4 — this slice: implemented AND verified GREEN)
+
+### Completed Tasks (Phase 4)
+
+- [x] 4.1 GREEN — `src/modules/catalog/ui/catalog-form.tsx` — generic `CatalogForm({ kind, initialValues?, firstFieldRef?, onSuccess?, onCancel? })`. Renders one `Field` + `Input` per `CATALOGS[kind].fields` entry (NO per-kind branching; `type: "date"` renders `<Input type="date">` for equipment's `calibrationDate`). `initialValues` present → edit mode (uncontrolled `defaultValue` pre-fill, hidden `id` input, calls `submitUpdateCatalog`); absent → create mode (calls `submitCreateCatalog`). Client-side `catalogCreateSchema`/`catalogUpdateSchema` `safeParse` blocks submit and shows `fieldErrors`; `useActionState` handles the server result; `useEffect(state.ok)` fires `onSuccess`. Exports the client-safe `CatalogRow` interface (structural twin of server `SerializedCatalogRow` — the server file is `server-only`, AD-3). Pattern: `create-user-form.tsx` (read-only).
+- [x] 4.2 GREEN — `src/modules/catalog/ui/catalog-create-dialog.tsx` — `Button` "Crear {label}" trigger → `ModalDialog` (title `Crear {label}`) → `CatalogForm` (no `initialValues`); auto-close on success; `firstFieldRef` threaded into both `initialFocus` and the form (Epic 2 form-dialog pattern). Pattern: `create-user-dialog.tsx` (read-only).
+- [x] 4.3 GREEN — `src/modules/catalog/ui/catalog-edit-dialog.tsx` — row-level ghost "Editar" trigger → `ModalDialog` (title "Editar elemento") → `CatalogForm` with `initialValues` pre-filled from the row; auto-close on success. One dialog instance per row (popup unmounts while closed, form remounts fresh with the row's current values on every open).
+- [x] 4.4 GREEN — `src/modules/catalog/ui/catalog-table.tsx` — `Card` + active-count header (`{n} elementos registrados · {m} activos`) + thead band + row hover + `StatusBadge` ("Activo"/"Inactivo") + per-row "Editar" (`CatalogEditDialog`) / "Desactivar" / "Reactivar" ghost buttons (submit wrappers in a transition) + empty state "No hay {label} todavía"; columns driven by `kind.fields` (first field renders `font-medium`, others muted). Pattern: `users-table.tsx` (read-only). Verified against spec "Empty And Status States" scenarios ("No hay Recipientes todavía", "Activo" badge for `isActive: true`, "Inactivo" badge for `isActive: false`).
+- [x] 4.5 Verify — `npx tsc --noEmit` exit 0; `npx next build` exit 0 — client/server boundary clean, no Prisma/`pg` leak into the client bundle.
+
+### TDD Cycle Evidence (Phase 4)
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 4.1 | — (no unit-test boundary) | Client component (`"use client"`) | Phase 1 unit 18/18 + Phase 2 integration 17/17 + Phase 3 tsc/build gates | — (NO unit-test boundary: the component is NOT mounted by any route until PR 5 and has no isolated test harness — NOT a test-first RED; prescribed verification per tasks.md 4.5 and design is `tsc --noEmit` + `next build`; driven end-to-end by PR 5's Playwright e2e `tests/e2e/configuracion.spec.ts`) | ✅ `npx tsc --noEmit` exit 0 (props/schema/action wiring type-checked); `npx next build` exit 0 (component compiles into the client graph with no Prisma/`pg` leak) | — (generic field iteration: equipos 4-field superset + uniform name-only kinds; create vs edit branch; client safeParse block; server fieldErrors mapping — covered by tsc narrowing + e2e later) | ✅ Clean |
+| 4.2 | — (no unit-test boundary) | Client component (`"use client"`) | same as 4.1 | — (same unmounted-UI note as 4.1) | ✅ `npx tsc --noEmit` exit 0; `npx next build` exit 0 | — (trigger/dialog/form wiring; auto-close via `onSuccess`) | ✅ Clean |
+| 4.3 | — (no unit-test boundary) | Client component (`"use client"`) | same as 4.1 | — (same unmounted-UI note as 4.1) | ✅ `npx tsc --noEmit` exit 0; `npx next build` exit 0 | — (row pre-fill via `initialValues` → `defaultValue`; hidden `id`) | ✅ Clean |
+| 4.4 | — (no unit-test boundary) | Client component (`"use client"`) | same as 4.1 | — (same unmounted-UI note as 4.1) | ✅ `npx tsc --noEmit` exit 0; `npx next build` exit 0 | — (empty state + Activo/Inactivo badge + deactivate/reactivate wiring — spec scenarios verified by inspection; e2e owns the rendered assertions) | ✅ Clean |
+| 4.5 | — (static/build gate) | Build | — | — | ✅ `npx tsc --noEmit` exit 0 (clean); `npx next build` exit 0: `✓ Compiled successfully in 33.4s`, `Finished TypeScript in 27.0s`, `✓ Generating static pages ... (7/7) in 6.6s`, route table unchanged (no `configuracion` routes yet — PR 5) | — | ✅ Grep: UI files import only react/zod/lucide, `@/components/ui/*` primitives, registry/schemas (client-safe), the four `submit-*.action.ts` wrappers (file-level `"use server"` proxies), and sibling UI files — zero `@/shared/db`/Prisma/`server-only` imports |
+
+### Test Summary (Phase 4)
+
+- **Total tests written**: 0 (no unit-test boundary for unmounted UI — see evidence note; PR 5's e2e owns the rendered behavior)
+- **Total tests passing**: N/A (static/build verification instead) — Phase 1 unit 18/18 + Phase 2 integration 17/17 remain the behavioral safety net, untouched by this slice
+- **Layers used**: Static type-check (`tsc --noEmit`) + production build (`next build`), per tasks.md 4.5 and the design's Testing Strategy
+- **Approval tests** (refactoring): None — all new files
+- **Pure functions created**: 0 new (all components; registry/schemas reused from Phase 1)
+
+### Work Unit Evidence (Phase 4)
+
+| Evidence | Required value |
+|---|---|
+| Focused test command and exact result | `npx tsc --noEmit` → exit 0 (clean, ~0 output). `npx next build` → exit 0: `✓ Compiled successfully in 33.4s`, `Finished TypeScript in 27.0s`, `✓ Generating static pages ... (7/7) in 6.6s`. No Turbopack/Prisma-`pg`-in-client error. Only warning: the pre-existing `middleware` file-convention deprecation (unrelated, noted in the orchestrator brief). |
+| Runtime harness command/scenario and exact result | `N/A` — components are not mounted by any route until PR 5 (`next build` route table shows no `configuracion` routes yet); driven by PR 5's e2e (`tests/e2e/configuracion.spec.ts`), per tasks.md Work Unit 4 row. |
+| Rollback boundary | Delete `src/modules/catalog/ui/catalog-form.tsx`, `catalog-create-dialog.tsx`, `catalog-edit-dialog.tsx`, `catalog-table.tsx` — server actions + submit wrappers (PR 2/3) remain and their tests/build still pass |
+
 ## Cumulative State
 
 - Phase 1: 5/5 complete
 - Phase 2: 8/8 complete (verified GREEN)
 - Phase 3: 5/5 complete (verified GREEN)
-- Phase 4: 0/5
+- Phase 4: 5/5 complete (verified GREEN)
 - Phase 5: 0/7
 
 ## Infrastructure Remediation Performed (orchestrator-authorized)
@@ -174,3 +212,13 @@ Getting to GREEN surfaced four defects in the as-written RED test file (which ha
 - **Uniform `AppError` → `{ ok, message, fieldErrors }` translation in all four wrappers** (not just create/update): the design's submit-wrapper contract and the Phase 3 task text both describe the shared `SubmitCatalogResult` shape, so deactivate/reactivate translate fieldErrors too (harmless for hidden `{ kind, id }` inputs, keeps the client result shape identical across all four actions).
 - **`calibrationDate` normalization lives in each create/update wrapper** as a private 1-line `calibrationDateOrNull` (`""`/missing → `null`, else raw `"yyyy-MM-dd"` string; the shared schema coerces to `Date`) — matches the design's "preprocess at the FormData boundary (client + submit wrapper)" and the Phase 2 integration evidence that the plain actions accept both `null` and `"2026-05-20"`-style strings.
 - **No new migrations, no schema changes, no UI/routes/e2e** — Phase 3 is four `"use server"` glue files only.
+
+## Phase 4 Notes / Deviations
+
+- **`CatalogRow` client type (deviation from design's letter, contract unchanged)**: the design's `CatalogFormProps` cites `SerializedCatalogRow`, which lives in `catalog-queries.ts` — a `server-only` module. Importing it from a `"use client"` component would pull Prisma/`pg` into the browser bundle (AD-3, the exact failure Phase 3's file-split exists to prevent). The client-safe structural twin `CatalogRow` is defined and exported from `catalog-form.tsx` (mirrors `users-table.tsx`'s own `UserRow` precedent) and reused by `catalog-table.tsx`/`catalog-edit-dialog.tsx`. TypeScript's structural typing keeps server rows (`SerializedCatalogRow[]`) assignable when PR 5's server page passes them in.
+- **Form action is component-scoped (not module-level)**: `catalogFormAction` is defined inside `CatalogForm` so it can close over `kind`, `fields`, `isEdit` and the chosen schema — the create/edit mode split is driven by `initialValues` presence exactly as the design prescribes, with no mode flag in the props. `useActionState` uses the latest action identity (standard Next.js inline-action pattern).
+- **Hidden inputs carry `kind` (always) and `id` (edit only)**: matches the design's Data Flow note ("kind + id carried by hidden inputs") and the submit wrappers' FormData contract (`submitUpdateCatalog` reads `id` from the form).
+- **Edit dialog title**: "Editar elemento" — neutral/professional Spanish, avoids grammar issues with the plural registry labels ("Editar Métodos") and avoids coupling to `row.values.name`.
+- **Submit labels**: create mode "Crear {label}" (shares the trigger label, mirroring the auth trigger/submit parity), edit mode "Guardar cambios"; pending states "Creando..."/"Guardando...".
+- **Client-side `safeParse` field-error filtering** filters `issue.path[0]` to `Object.keys(fields)` — the generic equivalent of `create-user-form.tsx`'s fixed field list; `kind`/`id` discriminator errors are unreachable (hidden inputs are controlled by the component) and are never shown as field errors. Server-returned `fieldErrors` are filtered the same way.
+- **No new migrations, no schema changes, no routes/nav/e2e** — Phase 4 is four `"use client"` UI files only. `next build`'s route table is unchanged (no `configuracion` routes yet — that is PR 5's slice).
