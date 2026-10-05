@@ -52,3 +52,22 @@ export const catalogUpdateSchema = z.discriminatedUnion("kind", [
 
 export type CreateCatalogInput = z.input<typeof catalogCreateSchema>;
 export type UpdateCatalogInput = z.input<typeof catalogUpdateSchema>;
+
+/**
+ * Shared `{ kind, id }` input for the deactivate/reactivate actions. Lives in
+ * this shared-schemas module (not one action file) because both actions need
+ * the exact same validation — matching the create/update pattern of a single
+ * shared definition imported by every caller.
+ */
+export const catalogIdSchema = z.object({
+  kind: z.enum([
+    "metodos",
+    "tecnicas",
+    "equipos",
+    "recipientes",
+    "tipos-de-muestra",
+  ]),
+  id: z.string().min(1),
+});
+
+export type CatalogIdInput = z.input<typeof catalogIdSchema>;
