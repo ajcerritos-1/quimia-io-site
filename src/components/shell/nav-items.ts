@@ -14,11 +14,11 @@
  * from outside `src/modules/auth/` (AC 3) — it filters via that shared
  * function, never a hand-rolled `.includes()`/role comparison here.
  *
- * Scope boundary: exactly ONE real entry today (`EXPERIENCE.md`'s Navigation
- * Map, "Usuarios y Roles | Sidebar (Admin only)"). Every other IA row points
- * at a screen that doesn't exist yet — do not scaffold placeholder entries
- * for Epics 2-11 here. Each future epic adds its own entry to THIS SAME
- * registry when its first real route ships.
+ * Scope boundary: exactly TWO real entries today (`EXPERIENCE.md`'s
+ * Navigation Map, "Usuarios y Roles" and "Configuración | Sidebar (Admin
+ * only)"). Every other IA row points at a screen that doesn't exist yet —
+ * do not scaffold placeholder entries for Epics 2-11 here. Each future epic
+ * adds its own entry to THIS SAME registry when its first real route ships.
  */
 import type { UserRole } from "../../shared/db";
 import { isRoleAllowed } from "../../modules/auth/roles";
@@ -31,6 +31,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Usuarios y Roles", href: "/usuarios", allowedRoles: ["admin"] },
+  { label: "Configuración", href: "/configuracion", allowedRoles: ["admin"] },
 ];
 
 export function visibleNavItems(role: UserRole): NavItem[] {
