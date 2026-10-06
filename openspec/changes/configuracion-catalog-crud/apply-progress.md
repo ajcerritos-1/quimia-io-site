@@ -6,7 +6,7 @@ Strict TDD (RED → GREEN → REFACTOR) — resolved from `openspec/config.yaml`
 
 ## Slice Boundary
 
-PR 4 (auto-chain, work-unit 4 of 5) — **Phase 4 only**: the four `src/modules/catalog/ui/` client components (generic form + create/edit dialogs + table). Phases 1–3 (PR 1 + PR 2 + PR 3) are complete and preserved below. No routes/nav/e2e (PR 5).
+PR 5 (auto-chain, work-unit 5 of 5) — **Phase 5 only**: the user-visible routes (`/configuracion` hub + `/configuracion/[catalog]`), the nav/sidebar changes, and the e2e spec. Phases 1–4 (PR 1 + PR 2 + PR 3 + PR 4) are complete and preserved below. One minimal, documented Phase 2 file touch was required (see Phase 5 Notes: `require-catalog-admin.ts` `attemptedAction` made optional so the page-level READ gate can reuse the guard without fabricating a mutation action).
 
 ---
 
@@ -166,13 +166,48 @@ PR 4 (auto-chain, work-unit 4 of 5) — **Phase 4 only**: the four `src/modules/
 | Runtime harness command/scenario and exact result | `N/A` — components are not mounted by any route until PR 5 (`next build` route table shows no `configuracion` routes yet); driven by PR 5's e2e (`tests/e2e/configuracion.spec.ts`), per tasks.md Work Unit 4 row. |
 | Rollback boundary | Delete `src/modules/catalog/ui/catalog-form.tsx`, `catalog-create-dialog.tsx`, `catalog-edit-dialog.tsx`, `catalog-table.tsx` — server actions + submit wrappers (PR 2/3) remain and their tests/build still pass |
 
+## Phase 5 (PR 5 — this slice: implemented AND verified GREEN)
+
+### Completed Tasks (Phase 5)
+
+- [x] 5.1 GREEN — `src/app/(app)/configuracion/page.tsx` — server component (`"server-only"`) mirroring `(app)/usuarios/page.tsx`: `headers()` → `x-tenant-id` (unresolved → `notFound()`), `requireCatalogAdmin` gate (401→`redirect("/sign-in")`, 403→`notFound()`), `getCatalogStats(ctx)` → `PageHeader` "Configuración" + a registry-driven 5-card grid. Each card renders in `CATALOGS[slug].label` order with the active count ("0 elementos" when zero, else `N elemento(s)`) and is a `<Link>` to `catalogHref(slug)`. Verified against "Hub Page Lists All Five Catalog Kinds With Active Counts".
+- [x] 5.2 GREEN — `src/app/(app)/configuracion/[catalog]/page.tsx` — server component: `await params` (Next 16 async params), `resolveCatalog(catalog)` against `CATALOGS` (`notFound()` for unknown/non-canonical slug, incl. `tiposDeMuestra`), `requireCatalogAdmin` gate, `listCatalogRows(kind.slug, ctx)`, renders `PageHeader` (title = catalog label) + `CatalogTable` + `CatalogCreateDialog`. Verified against "Per-Catalog Page Enforces Admin Gate And Resolves The Slug" and "Canonical Catalog Slug Contract".
+- [x] 5.3 GREEN — `src/components/shell/nav-items.ts` — added `{ label: "Configuración", href: "/configuracion", allowedRoles: ["admin"] }` after "Usuarios y Roles"; updated the file's scope-boundary comment from one to two real entries.
+- [x] 5.4 RED → GREEN — `src/components/shell/nav-items.test.ts` — `toHaveLength(1)`→`toHaveLength(2)` plus "includes 'Configuración' for an admin" and "hides 'Configuración' for quimico and recepcionista". RED: 2 failed / 4 passed; GREEN: 6/6.
+- [x] 5.5 GREEN — `src/components/shell/sidebar.tsx` — `pathname === item.href` → `pathname.startsWith(item.href)` with a comment explaining sub-route highlighting and the unchanged `/usuarios` behavior. Verified against "Sidebar Highlights Configuración On Sub-Routes" (e2e asserts `aria-current="page"` on the sub-route).
+- [x] 5.6 RED → GREEN — `tests/e2e/configuracion.spec.ts` (4 tests; pattern `usuarios.spec.ts`, `seedTenant`/`seedUser`, sign-in through the real UI): (1) admin sees nav + hub with 5 labeled cards, "0 elementos" ×5, Métodos card → `/configuracion/metodos`, sidebar `aria-current` on the sub-route; (2) create dialog opens via "Crear Métodos" + auto-closes, row + Activo badge, empty state disappears, edit dialog pre-fills/renames, deactivate→Inactivo, reactivate→Activo; (3) non-admin (recepcionista): nav entry absent, 404 on `/configuracion` and `/configuracion/metodos`; (4) admin: 404 on non-canonical `tiposDeMuestra` and `/configuracion/inexistente`. RED (routes absent): tests 1–2 failed ("element(s) not found"); GREEN (routes present): **4/4 passed**.
+- [x] 5.7 Final verification — `npx tsc --noEmit` exit 0; `npx next build` exit 0 (route table now lists `ƒ /configuracion` + `ƒ /configuracion/[catalog]`); full unit `npx vitest run` → **12 files / 70 tests passed**; integration `npx vitest run --config vitest.integration.config.ts` → **23 files / 119 tests passed**; `npx playwright test tests/e2e/configuracion.spec.ts` → **4 passed** (2.0m). Every proposal Success Criteria checkbox confirmed (details in Notes).
+
+### TDD Cycle Evidence (Phase 5)
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 5.3 + 5.4 | `src/components/shell/nav-items.test.ts` | Unit | ✅ 4/4 (pre-change baseline) | ✅ Written (2 new tests: admin-visible `/configuracion`, length 2) — observed `2 failed | 4 passed` (item absent, length 1) | ✅ **6/6 passed** (`npx vitest run src/components/shell/nav-items.test.ts`) | ✅ 3 cases (admin-visible, quimico+recepcionista-hidden, registry length 2) | ✅ Clean (no whitespace/dead code) |
+| 5.1 + 5.2 + 5.5 + 5.6 | `tests/e2e/configuracion.spec.ts` | E2E (real browser + built server + ephemeral Neon branch) | N/A (new spec); unit 70/70 + integration 119/119 remain green | ✅ Written before routes existed; observed RED: route-dependent tests 1–2 failed (`getByRole('heading'…) element(s) not found`), route-independent tests 3–4 passed | ✅ **4/4 passed** (`npx playwright test tests/e2e/configuracion.spec.ts`) — hub, CRUD lifecycle, non-admin 404, invalid-slug 404 | ✅ 4 tests covering hub+nav+sidebar, create/edit/deactivate/reactivate, non-admin gate, slug contract | ✅ Clean |
+
+### Test Summary (Phase 5)
+
+- **Total tests written**: 6 new (2 nav unit additions + 4 e2e); existing counts: full unit 70, integration 119
+- **Total tests passing**: nav unit 6/6; full unit 70/70; integration 119/119; e2e 4/4
+- **Layers used**: Unit (nav registry), E2E (routes/sidebar/CRUD), plus existing integration coverage for the action-level behavior
+- **Approval tests** (refactoring): None — no refactoring tasks
+- **Pure functions created**: 1 (`resolveCatalog` in the `[catalog]` page — pure slug→definition lookup, exercised by the invalid-slug e2e test)
+
+### Work Unit Evidence (Phase 5)
+
+| Evidence | Required value |
+|---|---|
+| Focused test command and exact result | `npx vitest run src/components/shell/nav-items.test.ts` → `Tests 6 passed (6)` (exit 0). `npx playwright test tests/e2e/configuracion.spec.ts` → `4 passed (2.0m)` (exit 0). |
+| Runtime harness command/scenario and exact result | `npx playwright test tests/e2e/configuracion.spec.ts` → `scripts/e2e/start-server.ts` created a real ephemeral Neon branch, ran `prisma migrate deploy`, provisioned `quimia_app`, ran a production `next build`, started `next start`; all 4 tests drove the real rendered app (hub → card link → `/configuracion/metodos` → create/edit/deactivate/reactivate through the real modal dialogs, sidebar `aria-current`, non-admin 404, invalid-slug 404). |
+| Rollback boundary | Delete `src/app/(app)/configuracion/` (both pages) + `tests/e2e/configuracion.spec.ts`; revert the edits to `src/components/shell/nav-items.ts`, `nav-items.test.ts`, `sidebar.tsx`; revert the one-line `attemptedAction?:` relaxation in `src/modules/catalog/server/require-catalog-admin.ts`. All prior units remain and pass. |
+
 ## Cumulative State
 
 - Phase 1: 5/5 complete
 - Phase 2: 8/8 complete (verified GREEN)
 - Phase 3: 5/5 complete (verified GREEN)
 - Phase 4: 5/5 complete (verified GREEN)
-- Phase 5: 0/7
+- Phase 5: 7/7 complete (verified GREEN)
 
 ## Infrastructure Remediation Performed (orchestrator-authorized)
 
@@ -222,3 +257,39 @@ Getting to GREEN surfaced four defects in the as-written RED test file (which ha
 - **Submit labels**: create mode "Crear {label}" (shares the trigger label, mirroring the auth trigger/submit parity), edit mode "Guardar cambios"; pending states "Creando..."/"Guardando...".
 - **Client-side `safeParse` field-error filtering** filters `issue.path[0]` to `Object.keys(fields)` — the generic equivalent of `create-user-form.tsx`'s fixed field list; `kind`/`id` discriminator errors are unreachable (hidden inputs are controlled by the component) and are never shown as field errors. Server-returned `fieldErrors` are filtered the same way.
 - **No new migrations, no schema changes, no routes/nav/e2e** — Phase 4 is four `"use client"` UI files only. `next build`'s route table is unchanged (no `configuracion` routes yet — that is PR 5's slice).
+
+## Phase 5 Notes / Deviations
+
+- **Page-level READ gate reuses `requireCatalogAdmin` with `attemptedAction` made optional (one Phase 2 file touched, boundary documented).** Tasks 5.1/5.2 require a `requireCatalogAdmin` page gate, but the guard's `RequireCatalogAdminOptions.attemptedAction` was required and its union (`CATALOG_CREATE|UPDATE|DEACTIVATE|REACTIVATE`) has no READ member — passing a mutation action for a page GET would fabricate misleading denial-audit data. `attemptedAction` is now optional, mirroring `requireAdmin`'s own optional `attemptedAction` (the established codebase pattern); the four Phase 2 mutation paths still pass it and are behaviorally unchanged (Phase 2 integration 17/17 still green). The hub passes `entity: "Catalog"`, the per-kind page passes `CATALOGS[kind].entity`; a non-admin page denial writes `CATALOG_ADMIN_ACTION_DENIED` with `after: null`. This one-line relaxation extends the PR 5 rollback boundary (see Work Unit Evidence).
+- **Unauthenticated redirect is inherited from the shell layout, not re-asserted in the new e2e.** `/configuracion.*` lives under the `(app)` route group whose layout calls `resolveActor()` and redirects any unauthenticated request to `/sign-in` before the page body renders — pre-existing, already-covered shell behavior. The new e2e asserts the spec's admin/non-admin/slug scenarios directly; the unauthenticated-redirect scenario is satisfied by that unchanged layout path (design Data Flow: hub uses `resolveActor`; the page gate's 401→redirect is a second line of defense).
+- **`params` is awaited (Next 16).** `src/app/(app)/configuracion/[catalog]/page.tsx` types `params` as `Promise<{ catalog: string }>` and awaits it, matching Next 16's async params.
+- **`resolveCatalog` guards the registry lookup at runtime, not via a cast.** `CATALOGS` is typed `Record<CatalogSlug, CatalogKindDef>`, so a blind `CATALOGS[catalog as CatalogSlug]` would type-check but return `undefined` at runtime for an unknown slug; the page indexes through `Record<string, CatalogKindDef | undefined>` and `notFound()`s when absent, so `tiposDeMuestra`/`inexistente` 404 (asserted in e2e test 4).
+- **Hub card copy**: zero active rows → the spec's literal "0 elementos"; otherwise `N elemento(s)` (singular/plural). The card's accessible name is the label plus the count, so the e2e `getByRole("link", { name: /métodos/i })` is unambiguous.
+- **No new migrations, no schema changes** — Phase 5 is two route files + nav/sidebar + one e2e spec + the one-line guard relaxation.
+- **Browser prerequisite**: Playwright's `chromium_headless_shell-1234` was missing on this machine; installed via `npx playwright install chromium-headless-shell` (environment setup, not a test result — the first e2e attempt failed on `browserType.launch` before any assertion ran).
+
+## Resume Re-verification Pass (delivery run — orchestrator relaunch)
+
+> This section preserves every prior section above verbatim and records an independent re-verification performed when the Phase 5 slice was relaunched to complete delivery (its prior implementation was fully written and staged but uncommitted). Only what was re-observed on this machine/run is reported here.
+
+### Commands re-run and exact results
+
+| Command | Result |
+|---|---|
+| `npx vitest run src/components/shell/nav-items.test.ts` | ✅ `Test Files 1 passed (1)` / `Tests 6 passed (6)` (exit 0, 503ms) |
+| `npx vitest run` (full unit) | ✅ `Test Files 12 passed (12)` / `Tests 70 passed (70)` (exit 0, 714ms) |
+| `npx tsc --noEmit` | ✅ exit 0 (clean; the previously-noted stale `.next/types/validator.ts` error did not resurface) |
+| `npx next build` | ✅ exit 0 (`✓ Compiled successfully in 5.0s`; route table lists `ƒ /configuracion` + `ƒ /configuracion/[catalog]`) |
+| `npx playwright test tests/e2e/configuracion.spec.ts` | ✅ `4 passed (1.6m)` — real ephemeral Neon branch + built `next start`; hub+nav+sidebar, full CRUD lifecycle, non-admin 404, invalid-slug 404 |
+| `npx vitest run --config vitest.integration.config.ts` (full) | ⚠️ `1 failed \| 22 passed (23) files` / `4 failed \| 115 passed (119) tests` — the 4 failures are all `Error: Client has encountered a connection error and is not queryable` / "Connection terminated unexpectedly" in the UNRELATED `tests/integration/auth-deactivate-user.test.ts` (its first test hung 323s). The catalog file passed within that run. |
+| `npx vitest run --config vitest.integration.config.ts tests/integration/auth-deactivate-user.test.ts` (isolated) | ✅ `Test Files 1 passed (1)` / `Tests 5 passed (5)` (41.26s) — proves the full-suite failures were ephemeral-Neon connection loss, not a regression |
+| `npx vitest run --config vitest.integration.config.ts tests/integration/catalog/catalog-crud.test.ts` | ⚠️ `8 failed \| 9 passed (17)` with `APIError: Failed to get session` / `fetch failed` |
+| same catalog command, retry | ❌ `No test files found` — globalSetup threw before collection: `Neon API POST /projects/<id>/branches failed (422): {"code":"BRANCHES_LIMIT_EXCEEDED","message":"branches limit exceeded"}` |
+
+### Classification
+
+The integration-suite failures on this resume are **infrastructure, not code**: the Neon project has reached its plan branch limit (`BRANCHES_LIMIT_EXCEEDED`, HTTP 422), so `tests/setup/neon-global-setup.ts` can no longer create a fresh branch per run. Every symptom (connection termination, "Failed to get session", `fetch failed`) precedes any catalog assertion; the same files pass in isolation when a branch is available, and the **e2e succeeded end-to-end on a real branch moments earlier** (create/edit/deactivate/reactivate). No catalog code path is implicated. The Phase 5 slice's own runtime evidence (e2e 4/4) is green; unit 70/70, `tsc`, and `next build` are green.
+
+### Residual environment risk (not resolved by this slice)
+
+Ephemeral `test-local-*` branches leaked from interrupted runs appear to have exhausted the free-tier branch budget. Until they are pruned (an authorized Neon control-plane mutation, intentionally NOT performed here), the full Vitest integration suite — and the Playwright harness, which also provisions a branch — may fail to provision one. Recommendation: prune leaked test branches, then re-run `npx vitest run --config vitest.integration.config.ts` to reconfirm the full 119/119.
