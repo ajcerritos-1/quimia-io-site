@@ -24,7 +24,29 @@ describe("visibleNavItems (Task 2 — the shell's RBAC-driven nav registry)", ()
     expect(items.some((item) => item.href === "/usuarios")).toBe(false);
   });
 
-  it("only defines the one real nav entry documented in the story (no premature scaffolding)", () => {
-    expect(NAV_ITEMS).toHaveLength(1);
+  it("includes 'Configuración' for an admin", () => {
+    const admin: UserRole = "admin";
+    const items = visibleNavItems(admin);
+    expect(items.some((item) => item.href === "/configuracion")).toBe(true);
+    expect(items.find((item) => item.href === "/configuracion")?.label).toBe(
+      "Configuración",
+    );
+  });
+
+  it("hides 'Configuración' entirely for a quimico and a recepcionista", () => {
+    const quimico: UserRole = "quimico";
+    const recepcionista: UserRole = "recepcionista";
+    expect(visibleNavItems(quimico).some((item) => item.href === "/configuracion")).toBe(
+      false,
+    );
+    expect(
+      visibleNavItems(recepcionista).some(
+        (item) => item.href === "/configuracion",
+      ),
+    ).toBe(false);
+  });
+
+  it("defines the two real nav entries documented in the stories (no premature scaffolding)", () => {
+    expect(NAV_ITEMS).toHaveLength(2);
   });
 });

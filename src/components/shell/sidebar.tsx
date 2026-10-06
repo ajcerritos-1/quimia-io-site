@@ -40,7 +40,12 @@ export function Sidebar({ role, className, onNavigate }: SidebarProps) {
       className={cn("w-64 flex-col gap-1 bg-brand-navy p-4", className)}
     >
       {items.map((item) => {
-        const isActive = pathname === item.href;
+        // Prefix match (not equality) so a parent entry stays highlighted on
+        // its sub-routes — e.g. `/configuracion/metodos` highlights
+        // "Configuración". `/usuarios` has no sub-routes today, so for it
+        // `startsWith("/usuarios")` is equivalent to `=== "/usuarios"`;
+        // behavior for every existing entry is unchanged.
+        const isActive = pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
