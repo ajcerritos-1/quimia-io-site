@@ -26,8 +26,12 @@ export type CatalogAttemptedAction =
 export interface RequireCatalogAdminOptions {
   /** Which catalog entity the denied attempt concerned, e.g. "Method". */
   entity: string;
-  /** What the caller was attempting when the guard ran. */
-  attemptedAction: CatalogAttemptedAction;
+  /** What the caller was attempting when the guard ran. Required for the four
+   *  mutation paths (create/update/deactivate/reactivate); omitted by the
+   *  page-level READ gate, which is not one of those mutations — mirrors
+   *  `requireAdmin`'s own optional `attemptedAction` (a page visit writes the
+   *  denial row with no fabricated "attempted action"). */
+  attemptedAction?: CatalogAttemptedAction;
   /** The target row id when already known from validated input (deactivate/
    *  reactivate/update); falls back to the denied actor's own id otherwise. */
   entityId?: string;
