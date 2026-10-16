@@ -113,7 +113,10 @@ model Method {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  studies Study[] // relation-only back-reference (Story 2.2, no column)
+
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // ADR-3 composite tenant-scoped FK target (index only)
   @@index([tenantId])
   // RLS + FORCE ROW LEVEL SECURITY (D5): tenant_isolation policy on
   // current_setting('app.tenant_id'). See catalog_supporting_models migration.
@@ -128,7 +131,10 @@ model Technique {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  studies Study[] // relation-only back-reference (Story 2.2, no column)
+
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // ADR-3 composite tenant-scoped FK target (index only)
   @@index([tenantId])
   // RLS + FORCE ROW LEVEL SECURITY (D5): tenant_isolation policy on
   // current_setting('app.tenant_id'). See catalog_supporting_models migration.
@@ -146,7 +152,10 @@ model Equipment {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  studies Study[] // relation-only back-reference (Story 2.2, no column)
+
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // ADR-3 composite tenant-scoped FK target (index only)
   @@index([tenantId])
   // RLS + FORCE ROW LEVEL SECURITY (D5): tenant_isolation policy on
   // current_setting('app.tenant_id'). See catalog_supporting_models migration.
@@ -157,11 +166,17 @@ model Container {
   id        String   @id @default(cuid(2))
   tenantId  String
   name      String
+  // AD-21 (Story 2.2): tube colour name, e.g. "lila". Nullable because non-tube
+  // containers ("Frasco", "Laminilla") have no tube colour. Name, not hex.
+  color     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  studyContainers StudyContainer[] // AD-21: many-to-many through the explicit join
+
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // ADR-3 composite tenant-scoped FK target (index only)
   @@index([tenantId])
   // Catalog LOOKUP only (AD-6): list of container types a Study references
   // ("tubo lila EDTA"). No per-tube order/tube identity is modeled — that is
@@ -180,11 +195,73 @@ model SampleType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  studies Study[] // relation-only back-reference (Story 2.2, no column)
+
   @@unique([tenantId, name])
+  @@unique([id, tenantId]) // ADR-3 composite tenant-scoped FK target (index only)
   @@index([tenantId])
   // RLS + FORCE ROW LEVEL SECURITY (D5): tenant_isolation policy on
   // current_setting('app.tenant_id'). See catalog_supporting_models migration.
   @@map("sample_type")
+}
+
+// ---- Study catalog (Story 2.2, slice 1/2) ----
+// The lab's billable test definition (AD-4 hinge entity). Tenant-owned (AD-2/
+// AD-3): bare tenantId, RLS + FORCE via the study_schema migration.
+// Catalog FKs are COMPOSITE on (fk, tenantId) -> (id, tenantId) (ADR-3): RLS
+// alone cannot stop a cross-tenant reference because PostgreSQL RI checks
+// bypass row security. onDelete Restrict = deactivate-not-delete (ADR-6).
+model Study {
+  id                String   @id @default(cuid(2))
+  tenantId          String
+  code              String
+  name              String // NOT unique (D7)
+  area              String
+  sampleTypeId      String
+  methodId          String
+  techniqueId       String
+  equipmentId       String? // nullable: a study may run on no instrument (D8)
+  patientConditions String?
+  processDays       Int      @default(1)
+  price             Decimal  @db.Decimal(10, 2) // MXN, NFR-9; tax semantics open (D3)
+  tax               Boolean  @default(false)
+  printMethod       Boolean  @default(false)
+  printTechnique    Boolean  @default(false)
+  printEquipment    Boolean  @default(false)
+  printSample       Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // `map` disambiguates the four relations that share tenantId.
+  sampleType SampleType @relation(fields: [sampleTypeId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_sample_type_fkey")
+  method     Method     @relation(fields: [methodId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_method_fkey")
+  technique  Technique  @relation(fields: [techniqueId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_technique_fkey")
+  equipment  Equipment? @relation(fields: [equipmentId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_equipment_fkey")
+
+  containers StudyContainer[]
+
+  @@unique([tenantId, code]) // AD-8 per-tenant uniqueness (D7)
+  @@unique([id, tenantId]) // ADR-3 composite FK target for StudyContainer
+  @@index([tenantId])
+  @@map("study")
+}
+
+// Explicit Study <-> Container many-to-many (AD-21). Prisma's implicit join
+// table has no tenantId and cannot carry RLS, so the join is a real model.
+// No timestamps: the spec fixes the field set (design "Open Questions").
+model StudyContainer {
+  id          String @id @default(cuid(2))
+  tenantId    String
+  studyId     String
+  containerId String
+
+  study     Study     @relation(fields: [studyId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_container_study_fkey")
+  container Container @relation(fields: [containerId, tenantId], references: [id, tenantId], onDelete: Restrict, map: "study_container_container_fkey")
+
+  @@unique([studyId, containerId]) // one link per distinct container per study
+  @@index([tenantId])
+  @@map("study_container")
 }
 
 // Better Auth core tables — RLS-EXEMPT by design (AD-2 threat-model addendum,

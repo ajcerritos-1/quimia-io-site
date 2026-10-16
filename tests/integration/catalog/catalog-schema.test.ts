@@ -81,7 +81,7 @@ describe("catalog_supporting_models migration — schema contract (R1, R3, R4, R
       ["method", LOCKED_COLUMNS],
       ["technique", LOCKED_COLUMNS],
       ["equipment", EQUIPMENT_COLUMNS],
-      ["container", LOCKED_COLUMNS],
+      ["container", [...LOCKED_COLUMNS, "color"]],
       ["sample_type", LOCKED_COLUMNS],
     ];
     for (const [table, expected] of expectedByTable) {
@@ -149,12 +149,12 @@ describe("catalog_supporting_models migration — schema contract (R1, R3, R4, R
     expect(rows[0].calibrationDate).toBeNull();
   });
 
-  it("Container carries only the locked catalog columns — no order/tube identity (R4, AD-6)", async () => {
+  it("Container carries the locked catalog columns plus the nullable color — no order/tube identity (R4, AD-6, AD-21)", async () => {
     const { rows } = await owner.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns
        WHERE table_schema = 'public' AND table_name = 'container' ORDER BY ordinal_position`,
     );
-    expect(rows.map((r) => r.column_name)).toEqual([...LOCKED_COLUMNS]);
+    expect(rows.map((r) => r.column_name)).toEqual([...LOCKED_COLUMNS, "color"]);
   });
 
   it("isActive defaults true and a deactivated row persists (R3)", async () => {
