@@ -111,6 +111,16 @@ Cross-module access always goes through an explicit interface/service call; a mo
 - **Prevents:** a module or agent assuming a bespoke backup system needs to be written
 - **Rule:** Phase 1 relies on Neon's built-in continuous backup / point-in-time restore (the same Neon capability already adopted for branching, AD-2) to satisfy NFR-8's operational-recovery half — a documented quarterly restore-drill is a Phase 1 operational task, not a system to build. **Not covered here:** Neon's PITR window is days-to-weeks, not the multi-year retention NOM-007/NOM-024 may require for clinical records — whether that's a real Phase 1 obligation, and what long-term archival mechanism it needs, is an open question flagged for the user (see the note this Finalize session raised alongside file/object storage and observability).
 
+### AD-21 — Container/tube catalog and label cardinality `[ADOPTED]`
+
+- **Binds:** `catalog` (`Container`, `Study`), `orders` (FR-22 container labels), Epic 6 label printing (Story 6.4); FR-9
+- **Prevents:** modelling `Study` ↔ `Container` as one tube per study (a scalar `tubeType`/`tubeColor` on `Study`, or a 1:N FK) — neither can express a study that needs two tubes (e.g. a chemistry panel drawing serum + a fluoride/oxalate tube), which would make Epic 6's print-preview silently under-print and a patient be drawn into the wrong tube.
+- **Rule:**
+  1. `Container` is a real admin-managed catalog entity (FR-9), not per-tube order identity (consistent with AD-6). It carries a nullable `color` — the tube colour (e.g. "amarillo"/"lila"/"rojo") that drives label printing — nullable because non-tube containers ("Frasco", "Laminilla") have no tube colour.
+  2. `Study` ↔ `Container` is **many-to-many**, through the explicit join model `StudyContainer` (a study may require more than one tube).
+  3. Epic 6 prints **one deduplicated label per distinct container** required across an order's studies, each carrying its study attribution and the catalog colour, with the folio barcode identical on every label (AD-6).
+- **Corrects:** the `### Core-entity ERD` note that said `Study` needs a `tubeType`/`tubeColor` catalog attribute as "catalog data, not a new entity". The catalog data is `Container.color`, and study ↔ container cardinality is many-to-many, not a scalar on `Study`.
+
 ### Dependency direction
 
 ```mermaid
@@ -233,7 +243,7 @@ erDiagram
 - `Order.folio` — composite unique on `(tenantId, folio)`, not globally unique (AD-4, AD-6).
 - `Result.source` — enum `MANUAL | INSTRUMENT` (AD-4), read by the capture screen (FR-35).
 - `OrderItem.status` — enum `ItemStatus`, stored, six values (AD-4 correction 3); `Kanban` column = least-advanced value across an order's items.
-- `Study` needs a `tubeType`/`tubeColor` catalog attribute (e.g. amarillo/lila/rojo) to drive how many container labels print per order and in which color (FR-22) — catalog data, not a new entity.
+- ~~`Study` needs a `tubeType`/`tubeColor` catalog attribute (e.g. amarillo/lila/rojo) to drive how many container labels print per order and in which color (FR-22) — catalog data, not a new entity.~~ **Superseded by AD-21:** the catalog data is `Container.color`, and `Study` ↔ `Container` is many-to-many (`StudyContainer`). See AD-21.
 - **`Branch` is Phase 1, not Phase 2** — reversing this spine's earlier Deferred call. `Caja`'s per-branch cash session (`CashSession`) is already a Phase 1 FR (FR-46), and modeling `branchId` on `Order`/`User`/`CashSession` from day one avoids a Phase-2 migration that would otherwise hit `orders` (needed ~week 5) before `cash` (needed ~week 13). Phase 1 seeds exactly one `Branch` row per tenant automatically at signup; Phase 2's Red plan (multi-branch, branch switcher) is additive — more rows, no schema change. Full `Branch` model detail (address, hours, etc. beyond the FK) stays deferred to `catalog`'s own SPEC→SCHEMA time.
 
 ### Source tree
