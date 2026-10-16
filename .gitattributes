@@ -1,0 +1,12 @@
+# Prisma migration files must check out as LF on every platform.
+#
+# Prisma records the sha256 of the raw migration.sql bytes into
+# _prisma_migrations.checksum at apply time, while git stores these blobs as LF.
+# With core.autocrlf=true (Windows default) and no attribute here, the working
+# tree was CRLF, so the recorded checksum disagreed with the bytes the repo
+# actually holds — and any machine with different line endings recorded a
+# different checksum for the same migration.
+#
+# Pinning eol=lf makes the checked-out bytes deterministic on every platform,
+# which is what the recorded checksums are reconciled against.
+prisma/migrations/** text eol=lf
